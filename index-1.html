@@ -1,0 +1,2893 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#ffecd2" />
+  <meta name="description" content="Main bareng teman di HP: Batu Gunting Kertas dan ABCD Lima Dasar, bisa offline atau multiplayer online." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <title>Arena Main HP — Suit & ABCD Lima Dasar</title>
+
+  <!-- SATU-SATUNYA DEPENDENCY EKSTERNAL: PeerJS untuk Multiplayer Online P2P -->
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js" onerror="this.onerror=null;this.src='https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';"></script>
+
+  <!-- =====================================================================
+       BAGIAN 1: CSS STYLING (Mobile-First App Shell, Ergonomis untuk Jempol)
+       ===================================================================== -->
+  <style>
+    :root {
+      --primary: #ff6b6b;
+      --secondary: #4ecdc4;
+      --accent: #ffe66d;
+      --purple: #a29bfe;
+      --blue: #54a0ff;
+      --green: #1dd1a1;
+      --orange: #ff9f43;
+      --dark: #1e272e;
+      --cream: #fffdf9;
+      --text-main: #1e272e;
+      --text-muted: #576574;
+      --border-thick: 3px solid #1e272e;
+      --shadow-card: 0 6px 0 #1e272e, 0 10px 20px rgba(30, 39, 46, 0.14);
+      --shadow-btn: 0 4px 0 #1e272e;
+      --shadow-btn-active: 0 1px 0 #1e272e;
+      --radius-xl: 24px;
+      --radius-lg: 18px;
+      --radius-md: 14px;
+      --radius-sm: 10px;
+      --font-round: 'Fredoka', 'Nunito', 'Comic Sans MS', 'Segoe UI Round', system-ui, -apple-system, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    input, textarea {
+      user-select: text;
+      -webkit-user-select: text;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100dvh;
+      font-family: var(--font-round);
+      color: var(--text-main);
+      background: linear-gradient(160deg, #74ebd5 0%, #9face6 50%, #ffecd2 100%);
+      background-attachment: fixed;
+      display: flex;
+      justify-content: center;
+      overflow-x: hidden;
+    }
+
+    /* App Shell Smartphone (Terpusat maks 460px agar pas di genggaman 1 tangan) */
+    .phone-shell {
+      width: 100%;
+      max-width: 460px;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: rgba(255, 253, 249, 0.35);
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.12);
+      padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    }
+
+    /* Sticky Topbar Smartphone */
+    .mobile-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 60;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+      background: rgba(255, 253, 249, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: var(--border-thick);
+    }
+
+    .topbar-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .pill-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 900;
+      border: 2px solid var(--dark);
+      background: #fff;
+      box-shadow: 0 2px 0 var(--dark);
+      white-space: nowrap;
+    }
+    .pill-badge.role-offline { background: #ffeaa7; }
+    .pill-badge.role-host { background: #ffbe76; }
+    .pill-badge.role-guest { background: #7ed6df; }
+    .pill-badge.conn-online { background: #badc58; }
+    .pill-badge.conn-offline { background: #ff7979; color: #fff; }
+    .pill-badge.room-tag {
+      background: #dff9fb;
+      font-family: monospace;
+      font-size: 0.78rem;
+      cursor: pointer;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 2px solid var(--dark);
+      background: var(--accent);
+      box-shadow: 0 2px 0 var(--dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.05rem;
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+    .icon-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 0 0 var(--dark);
+    }
+
+    /* Area Konten Layar */
+    .screen-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 12px 12px 8px;
+      width: 100%;
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      width: 100%;
+      background: var(--cream);
+      border: var(--border-thick);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      padding: 18px 14px;
+      text-align: center;
+      animation: slideUpFade 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translateY(14px) scale(0.97); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Tipografi Mobile */
+    .hero-mascot {
+      font-size: 2.8rem;
+      line-height: 1.1;
+      margin-bottom: 4px;
+      display: inline-block;
+      animation: floatMascot 2.2s infinite ease-in-out;
+    }
+    @keyframes floatMascot {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .app-title {
+      font-size: 1.55rem;
+      font-weight: 900;
+      color: var(--dark);
+      text-shadow: 2px 2px 0 #ffe66d;
+      margin-bottom: 4px;
+      line-height: 1.15;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--dark);
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 14px;
+      line-height: 1.35;
+    }
+
+    /* Tombol Ramah Jempol (Min Height 48px) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 900;
+      color: var(--dark);
+      background: var(--accent);
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-btn);
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+      text-decoration: none;
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: var(--shadow-btn-active);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.25);
+    }
+
+    .btn-primary { background: #ff6b6b; color: #fff; text-shadow: 1px 1px 0 var(--dark); }
+    .btn-secondary { background: #55efc4; color: var(--dark); }
+    .btn-blue { background: #74b9ff; color: var(--dark); }
+    .btn-green { background: #00b894; color: #fff; text-shadow: 1px 1px 0 var(--dark); }
+    .btn-orange { background: #fdcb6e; color: var(--dark); }
+    .btn-purple { background: #a29bfe; color: #fff; text-shadow: 1px 1px 0 var(--dark); }
+    .btn-ghost { background: #f1f2f6; color: var(--dark); }
+    .btn-sm { min-height: 40px; padding: 8px 12px; font-size: 0.88rem; }
+
+    /* Kartu Menu Pilihan Vertikal/Kompak untuk Layar Sempit */
+    .stack-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+      margin: 6px 0 12px;
+    }
+
+    .mobile-card-btn {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-btn);
+      padding: 14px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .mobile-card-btn:active {
+      transform: translateY(3px);
+      box-shadow: var(--shadow-btn-active);
+    }
+    .mobile-card-btn.bg-offline { background: linear-gradient(135deg, #fff9db 0%, #ffec99 100%); }
+    .mobile-card-btn.bg-online { background: linear-gradient(135deg, #e3fafc 0%, #99e9f2 100%); }
+    .mobile-card-btn.bg-rps { background: linear-gradient(135deg, #ffe3e3 0%, #ffc9c9 100%); }
+    .mobile-card-btn.bg-abcd { background: linear-gradient(135deg, #d3f9d8 0%, #b2f2bb 100%); }
+
+    .mcard-icon {
+      font-size: 2.3rem;
+      flex-shrink: 0;
+      width: 52px;
+      height: 52px;
+      background: rgba(255,255,255,0.75);
+      border: 2px solid var(--dark);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mcard-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .mcard-title {
+      font-size: 1.1rem;
+      font-weight: 900;
+      color: var(--dark);
+      margin-bottom: 2px;
+    }
+    .mcard-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    /* Kotak Kode Room Online */
+    .room-panel {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-lg);
+      padding: 14px 12px;
+      margin: 8px 0 12px;
+    }
+
+    .room-code-big {
+      font-family: 'Courier New', monospace;
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: 7px;
+      background: #fff9db;
+      border: 3px dashed var(--dark);
+      border-radius: var(--radius-md);
+      padding: 10px 16px;
+      margin: 8px auto;
+      display: inline-block;
+      color: #d63031;
+    }
+
+    /* Font-size >= 16px agar iOS & Android TIDAK melakukan auto-zoom saat ketik */
+    .code-input-mobile {
+      width: 100%;
+      max-width: 220px;
+      font-family: 'Courier New', monospace;
+      font-size: 24px;
+      font-weight: 900;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 6px;
+      padding: 10px 12px;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      background: #fff9db;
+      color: var(--dark);
+      outline: none;
+      margin: 8px auto 12px;
+      display: block;
+    }
+
+    .share-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 8px 0;
+    }
+
+    .status-banner {
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 2px solid var(--dark);
+      font-weight: 800;
+      margin: 8px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 0.86rem;
+      line-height: 1.3;
+    }
+    .status-banner.info { background: #dff9fb; color: #130f40; }
+    .status-banner.success { background: #badc58; color: #130f40; }
+    .status-banner.warn { background: #f6e58d; color: #130f40; }
+    .status-banner.error { background: #ff7979; color: #fff; }
+
+    /* =====================================================================
+       KOMPONEN GAME 1: BATU GUNTING KERTAS (MOBILE)
+       ===================================================================== */
+    .scoreboard-compact {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      box-shadow: 0 3px 0 var(--dark);
+    }
+    .s-player {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .s-name { font-size: 0.72rem; font-weight: 900; color: var(--text-muted); }
+    .s-pts { font-size: 1.55rem; font-weight: 900; color: var(--dark); line-height: 1.1; }
+    .s-vs {
+      font-size: 0.78rem;
+      font-weight: 900;
+      background: var(--accent);
+      border: 2px solid var(--dark);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .rps-stage-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin: 8px 0;
+    }
+    .fighter-box {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 12px 8px;
+      min-height: 128px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 4px 0 var(--dark);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .fighter-box.winner-glow {
+      background: #fff9db;
+      animation: pulseWin 0.7s infinite alternate;
+    }
+    @keyframes pulseWin {
+      from { transform: scale(1); }
+      to { transform: scale(1.03); box-shadow: 0 6px 0 var(--dark), 0 0 16px rgba(255,215,0,0.65); }
+    }
+
+    .fighter-tag {
+      font-size: 0.76rem;
+      font-weight: 900;
+      background: #f1f2f6;
+      border: 2px solid var(--dark);
+      border-radius: 999px;
+      padding: 2px 9px;
+      margin-bottom: 4px;
+    }
+    .fighter-emoji {
+      font-size: 3.1rem;
+      line-height: 1.1;
+      margin: 4px 0;
+    }
+    .fighter-state {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--text-muted);
+    }
+
+    .spell-shake {
+      animation: shakeCard 0.16s infinite alternate ease-in-out;
+    }
+    @keyframes shakeCard {
+      0% { transform: rotate(-8deg) scale(1.05); }
+      100% { transform: rotate(8deg) scale(0.95); }
+    }
+
+    .rps-thumb-pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin: 10px 0 6px;
+    }
+    .weapon-card-btn {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 12px 4px;
+      box-shadow: var(--shadow-btn);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      font-family: inherit;
+    }
+    .weapon-card-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: var(--shadow-btn-active);
+    }
+    .weapon-card-btn.selected {
+      background: #55efc4;
+    }
+    .weapon-card-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .w-icon { font-size: 2.3rem; line-height: 1; }
+    .w-name { font-size: 0.88rem; font-weight: 900; color: var(--dark); }
+
+    .result-pop {
+      font-size: 1.25rem;
+      font-weight: 900;
+      padding: 10px 12px;
+      border-radius: var(--radius-md);
+      border: var(--border-thick);
+      margin: 8px 0;
+      background: #ffeaa7;
+      box-shadow: 0 4px 0 var(--dark);
+      animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.7); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    /* =====================================================================
+       KOMPONEN GAME 2: ABCD LIMA DASAR (DENGAN QUICK-TAP PAD 1-20)
+       ===================================================================== */
+    .theme-grid-mobile {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 9px;
+      margin: 10px 0;
+    }
+    .theme-card-btn {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 12px 8px;
+      box-shadow: var(--shadow-btn);
+      cursor: pointer;
+      font-family: inherit;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .theme-card-btn:last-child:nth-child(odd) {
+      grid-column: span 2;
+    }
+    .theme-card-btn:active:not(:disabled) {
+      transform: translateY(3px);
+      box-shadow: var(--shadow-btn-active);
+    }
+    .theme-card-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .t-icon { font-size: 1.9rem; }
+    .t-label { font-size: 0.9rem; font-weight: 900; color: var(--dark); }
+
+    .narrator-banner {
+      background: linear-gradient(135deg, #ff7675 0%, #fdcb6e 100%);
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 0 var(--dark);
+    }
+    .narrator-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #fff;
+      text-shadow: 2px 2px 0 var(--dark);
+    }
+
+    /* Kotak Input Angka 1-20 Smartphone */
+    .abcd-players-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin: 6px 0;
+    }
+    .p-num-box {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 10px 8px;
+      box-shadow: 0 3px 0 var(--dark);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .p-num-box.p1 { background: #fff4e6; }
+    .p-num-box.p2 { background: #e3fafc; }
+    .p-num-box.active-turn {
+      outline: 3px solid #ff6b6b;
+    }
+
+    .stepper-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .step-circle {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      border: 2px solid var(--dark);
+      background: var(--accent);
+      font-size: 1.2rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 2px 0 var(--dark);
+    }
+    .step-circle:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+    .num-display-btn {
+      min-width: 52px;
+      height: 40px;
+      border: 2px solid var(--dark);
+      border-radius: 9px;
+      background: #fff;
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: var(--dark);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    .masked-badge {
+      height: 40px;
+      padding: 0 14px;
+      border: 2px dashed var(--dark);
+      border-radius: 9px;
+      background: #dfe6e9;
+      font-size: 1rem;
+      font-weight: 900;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 5x4 Quick-Tap Number Pad (1 sampai 20) Tanpa Buka Keyboard HP */
+    .quick-numpad-wrap {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      margin: 8px 0;
+      box-shadow: 0 3px 0 var(--dark);
+    }
+    .numpad-header {
+      font-size: 0.78rem;
+      font-weight: 900;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .numpad-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+    .numpad-key {
+      height: 38px;
+      border-radius: 8px;
+      border: 2px solid var(--dark);
+      background: #f8f9fa;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 900;
+      color: var(--dark);
+      box-shadow: 0 2px 0 var(--dark);
+      cursor: pointer;
+    }
+    .numpad-key:active {
+      transform: translateY(2px);
+      box-shadow: none;
+    }
+    .numpad-key.active-num {
+      background: #55efc4;
+    }
+
+    /* Showcase Huruf Hasil & Timer */
+    .letter-stage-box {
+      background: linear-gradient(180deg, #fff9db 0%, #ffeaa7 100%);
+      border: var(--border-thick);
+      border-radius: var(--radius-lg);
+      padding: 12px 10px;
+      margin: 6px 0;
+      box-shadow: 0 4px 0 var(--dark);
+    }
+    .formula-pill {
+      font-size: 0.8rem;
+      font-weight: 900;
+      background: #fff;
+      border: 2px solid var(--dark);
+      border-radius: 999px;
+      padding: 4px 10px;
+      display: inline-block;
+      margin-bottom: 4px;
+    }
+    .big-result-letter {
+      font-size: 4.2rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #d63031;
+      text-shadow: 3px 3px 0 var(--dark);
+      margin: 4px 0;
+      display: inline-block;
+      animation: letterPulse 0.9s infinite alternate ease-in-out;
+    }
+    @keyframes letterPulse {
+      from { transform: scale(1) rotate(-3deg); }
+      to { transform: scale(1.08) rotate(3deg); }
+    }
+
+    .question-prompt {
+      font-size: 0.95rem;
+      font-weight: 800;
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+    .highlight-tag {
+      background: #55efc4;
+      padding: 1px 6px;
+      border-radius: 6px;
+      border: 1.5px solid var(--dark);
+      display: inline-block;
+    }
+
+    .timer-card {
+      background: #fff;
+      border: var(--border-thick);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      margin: 8px 0;
+      box-shadow: 0 3px 0 var(--dark);
+    }
+    .countdown-num {
+      font-size: 2.3rem;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--dark);
+      margin: 2px 0;
+    }
+    .countdown-num.danger {
+      color: #d63031;
+      animation: dangerShake 0.25s infinite;
+    }
+    @keyframes dangerShake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-3px); }
+      75% { transform: translateX(3px); }
+    }
+
+    .timer-bar-bg {
+      width: 100%;
+      height: 14px;
+      background: #dfe6e9;
+      border: 2px solid var(--dark);
+      border-radius: 999px;
+      overflow: hidden;
+      margin: 6px 0 10px;
+    }
+    .timer-bar-fill {
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #00b894, #55efc4);
+      transition: width 0.3s linear, background 0.3s ease;
+    }
+    .timer-bar-fill.warn { background: linear-gradient(90deg, #fdcb6e, #e17055); }
+    .timer-bar-fill.danger { background: linear-gradient(90deg, #d63031, #ff7675); }
+
+    .bottom-actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .bottom-actions-grid .full-span {
+      grid-column: span 2;
+    }
+
+    /* Modal Popup & Panduan Publish Gratis */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(30, 39, 46, 0.72);
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+    .modal-backdrop.active {
+      display: flex;
+    }
+    .modal-sheet {
+      background: var(--cream);
+      border: var(--border-thick);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-card);
+      max-width: 420px;
+      width: 100%;
+      max-height: 88dvh;
+      overflow-y: auto;
+      padding: 20px 16px;
+      text-align: center;
+      animation: popIn 0.25s ease-out;
+    }
+
+    .publish-step {
+      text-align: left;
+      background: #fff;
+      border: 2px solid var(--dark);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.84rem;
+      line-height: 1.4;
+      font-weight: 700;
+    }
+    .publish-step b {
+      color: #d63031;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- =====================================================================
+       BAGIAN 2: STRUKTUR HTML MOBILE APP SHELL
+       ===================================================================== -->
+  <div class="phone-shell">
+
+    <!-- STICKY TOPBAR SMARTPHONE -->
+    <header class="mobile-topbar">
+      <div class="topbar-status">
+        <span id="badgeRole" class="pill-badge role-offline">📱 Offline</span>
+        <span id="badgeConn" class="pill-badge conn-offline" style="display: none;">🔴 Putus</span>
+        <span id="badgeRoom" class="pill-badge room-tag" style="display: none;" onclick="RoomManager.copyRoomCode()" title="Ketuk untuk salin kode">----</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="btnSound" class="icon-btn" onclick="AudioFX.toggleMute()" aria-label="Toggle Suara">🔊</button>
+        <button class="icon-btn" onclick="AppNav.confirmGoHome()" aria-label="Menu Utama">🏠</button>
+      </div>
+    </header>
+
+    <main class="screen-container">
+
+      <!-- LAYAR 1: MENU UTAMA -->
+      <section id="screenHome" class="screen active">
+        <div class="hero-mascot">📱🎮</div>
+        <h1 class="app-title">Arena Main Seru</h1>
+        <p class="subtitle">Batu Gunting Kertas & ABCD Lima Dasar edisi Smartphone!</p>
+
+        <div class="stack-cards">
+          <!-- Mode Offline 1 HP -->
+          <div class="mobile-card-btn bg-offline" onclick="AppNav.startOfflineMode()">
+            <div class="mcard-icon">🤝</div>
+            <div class="mcard-body">
+              <div class="mcard-title">Main Offline (1 HP)</div>
+              <div class="mcard-desc">2 Pemain gantian di 1 smartphone yang sama</div>
+            </div>
+          </div>
+
+          <!-- Mode Online 2 HP -->
+          <div class="mobile-card-btn bg-online" onclick="AppNav.openOnlineLobby()">
+            <div class="mcard-icon">🌐</div>
+            <div class="mcard-body">
+              <div class="mcard-title">Main Online (2 HP)</div>
+              <div class="mcard-desc">Mabar beda HP pakai Kode Room / Link WA</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tombol Panduan Publish Domain Gratis -->
+        <button class="btn btn-orange btn-sm" onclick="AppNav.openPublishGuide()" style="margin-top: 4px;">
+          🌍 Cara Publish ke Domain Gratis (1 Menit)
+        </button>
+      </section>
+
+      <!-- LAYAR 2: LOBBY ONLINE (BUAT ROOM / JOIN ROOM) -->
+      <section id="screenOnlineLobby" class="screen">
+        <div class="hero-mascot">🌐📲</div>
+        <h2 class="section-title">Mabar Online 2 HP</h2>
+        <p class="subtitle">Pilih Buat Room (Host) atau masukkan kode temanmu (Guest)</p>
+
+        <!-- Pilihan Buat atau Join -->
+        <div id="lobbyChoiceArea" class="stack-cards">
+          <div class="mobile-card-btn bg-offline" onclick="RoomManager.createRoom()">
+            <div class="mcard-icon">👑</div>
+            <div class="mcard-body">
+              <div class="mcard-title">Buat Room Baru</div>
+              <div class="mcard-desc">Dapatkan kode 4 karakter & bagikan ke teman</div>
+            </div>
+          </div>
+
+          <div class="mobile-card-btn bg-online" onclick="RoomManager.showJoinForm()">
+            <div class="mcard-icon">🔑</div>
+            <div class="mcard-body">
+              <div class="mcard-title">Join Room Teman</div>
+              <div class="mcard-desc">Masukkan 4 karakter kode room dari temanmu</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel HOST: Tampilkan Kode + Salin + Share WA -->
+        <div id="hostRoomPanel" class="room-panel" style="display: none;">
+          <div style="font-size: 0.82rem; font-weight: 800; color: var(--text-muted);">
+            KODE ROOM KAMU (PLAYER 1):
+          </div>
+          <div id="hostCodeDisplay" class="room-code-big">----</div>
+
+          <div class="share-grid">
+            <button id="btnCopyCode" class="btn btn-orange btn-sm" onclick="RoomManager.copyRoomCode()">
+              📋 Salin Kode
+            </button>
+            <button class="btn btn-green btn-sm" onclick="RoomManager.shareRoomLink()">
+              📲 Bagikan WA
+            </button>
+          </div>
+
+          <div id="hostWaitStatus" class="status-banner warn">
+            ⏳ Menyiapkan room...
+          </div>
+          <button id="btnRetryHost" class="btn btn-ghost btn-sm" style="display: none; margin-top: 8px;" onclick="RoomManager.createRoom()">
+            🔄 Coba Buat Room Lagi
+          </button>
+        </div>
+
+        <!-- Panel GUEST: Input Kode 4 Karakter -->
+        <div id="guestJoinPanel" class="room-panel" style="display: none;">
+          <div style="font-size: 0.85rem; font-weight: 800; color: var(--text-muted);">
+            Ketik 4 Karakter Kode Room:
+          </div>
+          <input
+            id="inputRoomCode"
+            type="text"
+            inputmode="text"
+            autocapitalize="characters"
+            autocomplete="off"
+             autocorrect="off"
+            spellcheck="false"
+            maxlength="4"
+            placeholder="A7K2"
+            class="code-input-mobile"
+            oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+          />
+          <button id="btnJoinRoom" class="btn btn-green" onclick="RoomManager.joinRoom()">
+            🚀 Gabung Room
+          </button>
+          <div id="guestJoinStatus" class="status-banner info" style="display: none;"></div>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" onclick="AppNav.backToHome()" style="margin-top: 8px;">
+          ⬅️ Kembali ke Menu Utama
+        </button>
+      </section>
+
+      <!-- LAYAR 3: PILIH GAME (RPS / ABCD LIMA DASAR) -->
+      <section id="screenSelectGame" class="screen">
+        <div id="connectedBanner" class="status-banner success" style="display: none;">
+          ✅ Terhubung! Pilih game…
+        </div>
+
+        <div class="hero-mascot">🎲🏆</div>
+        <h2 class="section-title">Pilih Permainan</h2>
+        <p id="selectGameSubtitle" class="subtitle">Ketuk game yang ingin dimainkan:</p>
+
+        <div class="stack-cards">
+          <!-- Game 1: Batu Gunting Kertas -->
+          <div class="mobile-card-btn bg-rps" onclick="AppNav.launchGame('rps')">
+            <div class="mcard-icon">✊</div>
+            <div class="mcard-body">
+              <div class="mcard-title">Batu Gunting Kertas</div>
+              <div class="mcard-desc">Adu suit cepat dengan efek spell & skor sesi!</div>
+            </div>
+          </div>
+
+          <!-- Game 2: ABCD Lima Dasar -->
+          <div class="mobile-card-btn bg-abcd" onclick="AppNav.launchGame('abcd')">
+            <div class="mcard-icon">🖐️</div>
+            <div class="mcard-body">
+              <div class="mcard-title">ABCD Lima Dasar</div>
+              <div class="mcard-desc">Pilih angka 1–20, cari huruf A–Z & tebak kata 10 detik!</div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-ghost btn-sm" onclick="AppNav.leaveToMainMenu()">
+          🏠 Keluar ke Menu Utama
+        </button>
+      </section>
+
+      <!-- LAYAR 4: GAME 1 — BATU GUNTING KERTAS (RPS) -->
+      <section id="screenGameRPS" class="screen">
+        <h2 class="section-title">✊✌️✋ Suit Jepang</h2>
+
+        <!-- Papan Skor Sesi -->
+        <div class="scoreboard-compact">
+          <div class="s-player">
+            <span class="s-name" id="rpsLabelP1">👑 PLAYER 1</span>
+            <span class="s-pts" id="rpsScoreP1">0</span>
+          </div>
+          <div class="s-vs">VS</div>
+          <div class="s-player">
+            <span class="s-name" id="rpsLabelP2">🎮 PLAYER 2</span>
+            <span class="s-pts" id="rpsScoreP2">0</span>
+          </div>
+        </div>
+
+        <!-- Banner Instruksi Giliran -->
+        <div id="rpsTurnBanner" class="status-banner info">
+          Giliran Player 1 memilih senjata!
+        </div>
+
+        <!-- Arena Kartu 2 Pemain -->
+        <div class="rps-stage-cards">
+          <div id="rpsCardP1" class="fighter-box">
+            <span class="fighter-tag">Player 1</span>
+            <div id="rpsEmojiP1" class="fighter-emoji">❓</div>
+            <span id="rpsStatusP1" class="fighter-state">Menunggu...</span>
+          </div>
+
+          <div id="rpsCardP2" class="fighter-box">
+            <span class="fighter-tag">Player 2</span>
+            <div id="rpsEmojiP2" class="fighter-emoji">❓</div>
+            <span id="rpsStatusP2" class="fighter-state">Menunggu...</span>
+          </div>
+        </div>
+
+        <!-- Pengumuman Hasil Pemenang -->
+        <div id="rpsResultBanner" class="result-pop" style="display: none;">
+          🎉 Player 1 Menang!
+        </div>
+
+        <!-- Tombol Jempol Pilihan Batu / Gunting / Kertas -->
+        <div class="rps-thumb-pad">
+          <button id="btnWeaponBatu" class="weapon-card-btn" onclick="RPSGame.pickWeapon('batu')">
+            <span class="w-icon">✊</span>
+            <span class="w-name">Batu</span>
+          </button>
+          <button id="btnWeaponGunting" class="weapon-card-btn" onclick="RPSGame.pickWeapon('gunting')">
+            <span class="w-icon">✌️</span>
+            <span class="w-name">Gunting</span>
+          </button>
+          <button id="btnWeaponKertas" class="weapon-card-btn" onclick="RPSGame.pickWeapon('kertas')">
+            <span class="w-icon">✋</span>
+            <span class="w-name">Kertas</span>
+          </button>
+        </div>
+
+        <!-- Navigasi Bawah RPS -->
+        <div class="bottom-actions-grid">
+          <button id="btnRpsPlayAgain" class="btn btn-secondary full-span" onclick="RPSGame.requestNewRound()" style="display: none;">
+            🔄 Main Lagi
+          </button>
+          <button class="btn btn-ghost btn-sm full-span" onclick="AppNav.returnToGameMenu()">
+            🏠 Kembali ke Menu Game
+          </button>
+        </div>
+      </section>
+
+      <!-- LAYAR 5: GAME 2 — ABCD LIMA DASAR -->
+      <section id="screenGameABCD" class="screen">
+        <h2 class="section-title">🖐️🔤 ABCD Lima Dasar</h2>
+
+        <!-- SUB-LAYAR 5A: PILIH TEMA -->
+        <div id="abcdThemeStage">
+          <p id="abcdThemePrompt" class="subtitle" style="margin-bottom: 8px;">
+            Pilih tema kata untuk ronde ini:
+          </p>
+
+          <div class="theme-grid-mobile">
+            <button class="theme-card-btn" onclick="ABCDGame.selectTheme('Alat tulis', '📚')">
+              <span class="t-icon">📚</span>
+              <span class="t-label">Alat tulis</span>
+            </button>
+            <button class="theme-card-btn" onclick="ABCDGame.selectTheme('Alat makan', '🍽️')">
+              <span class="t-icon">🍽️</span>
+              <span class="t-label">Alat makan</span>
+            </button>
+            <button class="theme-card-btn" onclick="ABCDGame.selectTheme('Peralatan sekolah', '🎒')">
+              <span class="t-icon">🎒</span>
+              <span class="t-label">Peralatan sekolah</span>
+            </button>
+            <button class="theme-card-btn" onclick="ABCDGame.selectTheme('Tumbuhan', '🌱')">
+              <span class="t-icon">🌱</span>
+              <span class="t-label">Tumbuhan</span>
+            </button>
+            <button class="theme-card-btn" onclick="ABCDGame.selectTheme('Hewan', '🐾')">
+              <span class="t-icon">🐾</span>
+              <span class="t-label">Hewan</span>
+            </button>
+          </div>
+
+          <div id="abcdGuestWaitTheme" class="status-banner warn" style="display: none;">
+            ⏳ Menunggu Host (P1) memilih tema...
+          </div>
+
+          <button class="btn btn-ghost btn-sm" onclick="AppNav.returnToGameMenu()" style="margin-top: 6px;">
+            🏠 Kembali ke Menu Game
+          </button>
+        </div>
+
+        <!-- SUB-LAYAR 5B: INPUT ANGKA & HASIL HURUF -->
+        <div id="abcdPlayStage" style="display: none;">
+          <!-- Banner Narator Pancasila Lima Dasar -->
+          <div class="narrator-banner">
+            <div class="narrator-title">🗣️ "Pancasila Lima Dasar!"</div>
+            <div style="font-size: 0.78rem; font-weight: 900; margin-top: 3px;">
+              Tema: <span id="abcdActiveThemeBadge" class="pill-badge">📚 Alat tulis</span>
+            </div>
+          </div>
+
+          <!-- Area Input Angka (1-20) dengan Quick-Tap Pad -->
+          <div id="abcdInputSection">
+            <div class="abcd-players-row">
+              <!-- Kotak Player 1 -->
+              <div id="boxCardP1" class="p-num-box p1">
+                <div style="font-size: 0.78rem; font-weight: 900;">👑 Player 1</div>
+                <div id="p1StepperWrap" class="stepper-row">
+                  <button class="step-circle" onclick="ABCDGame.stepNumber(1, -1)">−</button>
+                  <div id="dispNumP1" class="num-display-btn" onclick="ABCDGame.focusPad(1)">5</div>
+                  <button class="step-circle" onclick="ABCDGame.stepNumber(1, 1)">+</button>
+                </div>
+                <div id="p1MaskedWrap" class="masked-badge" style="display: none;">🔒 Siap</div>
+                <button id="btnSubmitNumP1" class="btn btn-orange btn-sm" onclick="ABCDGame.submitNumber(1)">
+                  🔒 Kunci P1
+                </button>
+                <span id="statusNumP1" style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted);">
+                  Pilih 1–20
+                </span>
+              </div>
+
+              <!-- Kotak Player 2 -->
+              <div id="boxCardP2" class="p-num-box p2">
+                <div style="font-size: 0.78rem; font-weight: 900;">🎮 Player 2</div>
+                <div id="p2StepperWrap" class="stepper-row">
+                  <button class="step-circle" onclick="ABCDGame.stepNumber(2, -1)">−</button>
+                  <div id="dispNumP2" class="num-display-btn" onclick="ABCDGame.focusPad(2)">5</div>
+                  <button class="step-circle" onclick="ABCDGame.stepNumber(2, 1)">+</button>
+                </div>
+                <div id="p2MaskedWrap" class="masked-badge" style="display: none;">🔒 Siap</div>
+                <button id="btnSubmitNumP2" class="btn btn-blue btn-sm" onclick="ABCDGame.submitNumber(2)">
+                  🔒 Kunci P2
+                </button>
+                <span id="statusNumP2" style="font-size: 0.72rem; font-weight: 800; color: var(--text-muted);">
+                  Menunggu P1...
+                </span>
+              </div>
+            </div>
+
+            <!-- 5x4 Quick-Tap Number Pad (1-20) agar tidak perlu buka keyboard HP -->
+            <div id="quickNumpadBox" class="quick-numpad-wrap">
+              <div class="numpad-header">
+                <span id="numpadTargetLabel">⚡ Ketuk Cepat Angka (1–20):</span>
+                <span style="color: #0984e3;">Tanpa Keyboard HP</span>
+              </div>
+              <div id="numpadGrid" class="numpad-grid">
+                <!-- Di-generate otomatis 1 sampai 20 oleh JS -->
+              </div>
+            </div>
+
+            <!-- Tombol Hitung Huruf -->
+            <button id="btnCalculateABCD" class="btn btn-primary" onclick="ABCDGame.handleCalculateClick()" disabled>
+              🧮 Hitung Huruf!
+            </button>
+            <div id="abcdWaitCalcBanner" class="status-banner warn" style="display: none;">
+              ⏳ Kedua angka terkunci! Menunggu Host menekan Hitung...
+            </div>
+          </div>
+
+          <!-- Area Hasil Huruf & Timer 10 Detik -->
+          <div id="abcdResultSection" style="display: none;">
+            <div class="letter-stage-box">
+              <div id="abcdFormulaText" class="formula-pill">
+                5 + 7 = 12 ➡️ Huruf ke-12
+              </div>
+              <div>
+                <span id="abcdGiantLetter" class="big-result-letter">L</span>
+              </div>
+              <p class="question-prompt">
+                Sebutkan satu kata dari tema <span id="promptThemeText" class="highlight-tag">📚 Alat tulis</span> yang berawalan huruf <span id="promptLetterText" class="highlight-tag">L</span>!
+              </p>
+              <div id="abcdExampleHint" style="font-size: 0.78rem; font-weight: 800; color: var(--text-muted); margin-top: 6px;">
+                💡 Contoh: Lem, Label...
+              </div>
+            </div>
+
+            <!-- Timer Countdown 10 Detik -->
+            <div class="timer-card">
+              <div style="font-size: 0.76rem; font-weight: 900; color: var(--text-muted);">
+                ⏱️ WAKTU MENJAWAB (10 DETIK):
+              </div>
+              <div id="abcdTimerDisplay" class="countdown-num">10</div>
+              <div class="timer-bar-bg">
+                <div id="abcdTimerBar" class="timer-bar-fill"></div>
+              </div>
+
+              <div id="abcdTimerStatusBanner" class="result-pop" style="display: none;"></div>
+
+              <button id="btnAnsweredABCD" class="btn btn-green" onclick="ABCDGame.markAnswered()">
+                ✅ Sudah Menjawab!
+              </button>
+            </div>
+          </div>
+
+          <!-- Tombol Navigasi Bawah ABCD -->
+          <div class="bottom-actions-grid">
+            <button class="btn btn-secondary btn-sm" onclick="ABCDGame.requestNewRound()">
+              🔄 Ronde Baru
+            </button>
+            <button id="btnChangeThemeABCD" class="btn btn-orange btn-sm" onclick="ABCDGame.requestChangeTheme()">
+              🎨 Ganti Tema
+            </button>
+            <button class="btn btn-ghost btn-sm full-span" onclick="AppNav.returnToGameMenu()">
+              🏠 Kembali ke Menu
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- MODAL 1: KONEKSI TERPUTUS -->
+  <div id="modalDisconnect" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div style="font-size: 3rem; margin-bottom: 6px;">📡❌</div>
+      <h2 class="section-title">Koneksi Terputus</h2>
+      <p id="modalDisconnectMsg" class="subtitle">Hubungan dengan HP lawan terputus.</p>
+      <button class="btn btn-primary" onclick="AppNav.closeModalAndReset()">
+        🏠 Kembali ke Menu
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: PANDUAN PUBLISH KE DOMAIN GRATIS -->
+  <div id="modalPublishGuide" class="modal-backdrop">
+    <div class="modal-sheet">
+      <div style="font-size: 2.6rem; margin-bottom: 4px;">🌍🚀</div>
+      <h2 class="section-title">Publish ke Domain Gratis</h2>
+      <p class="subtitle">Cukup simpan file <b>index.html</b> ini lalu unggah ke salah satu layanan gratis berikut:</p>
+
+      <div class="publish-step">
+        <b>1. Netlify Drop (Paling Cepat - 30 Detik)</b><br/>
+        • Buka <b>app.netlify.com/drop</b> di browser.<br/>
+        • Tarik/unggah file <code>index.html</code> ini.<br/>
+        • Langsung dapat link gratis <code>https://nama-unik.netlify.app</code>!
+      </div>
+
+      <div class="publish-step">
+        <b>2. Tiiny.host (Bisa langsung dari HP)</b><br/>
+        • Buka <b>tiiny.host</b> di Chrome/Safari HP kamu.<br/>
+        • Pilih file <code>index.html</code>, ketik nama subdomain, lalu klik <b>Publish</b>!
+      </div>
+
+      <div class="publish-step">
+        <b>3. GitHub Pages / Vercel</b><br/>
+        • Upload <code>index.html</code> ke repository GitHub, aktifkan GitHub Pages untuk domain <code>.github.io</code> selamanya.
+      </div>
+
+      <button class="btn btn-secondary" onclick="AppNav.closePublishGuide()">
+        👍 Mengerti, Tutup
+      </button>
+    </div>
+  </div>
+
+  <!-- =====================================================================
+       BAGIAN 3: JAVASCRIPT (Audio/Haptic, PeerJS Room, RPS, ABCD, Timer)
+       ===================================================================== -->
+  <script>
+    /**
+     * =====================================================================
+     * 1. ENGINE SUARA (Web Audio API), NARRATOR (SpeechSynthesis) & HAPTIC
+     * =====================================================================
+     */
+    const AudioFX = {
+      ctx: null,
+      muted: false,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      // Getaran Haptic untuk Smartphone Android/iOS yang mendukung
+      vibrate(pattern = 25) {
+        try {
+          if (navigator.vibrate) navigator.vibrate(pattern);
+        } catch (e) {}
+      },
+
+      toggleMute() {
+        this.muted = !this.muted;
+        this.vibrate(20);
+        const btn = document.getElementById('btnSound');
+        btn.textContent = this.muted ? '🔇' : '🔊';
+        btn.style.background = this.muted ? '#dfe6e9' : 'var(--accent)';
+        if (this.muted && 'speechSynthesis' in window) {
+          window.speechSynthesis.cancel();
+        } else {
+          this.playTone(600, 0.08, 'sine');
+        }
+      },
+
+      playTone(freq = 440, duration = 0.09, type = 'sine', delay = 0) {
+        if (this.muted) return;
+        try {
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime + delay;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, now);
+          gain.gain.setValueAtTime(0.15, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + duration);
+        } catch (e) {}
+      },
+
+      click() {
+        this.vibrate(15);
+        this.playTone(540, 0.06, 'triangle');
+      },
+
+      lock() {
+        this.vibrate([25, 40, 25]);
+        this.playTone(440, 0.06, 'sine', 0);
+        this.playTone(680, 0.08, 'sine', 0.06);
+      },
+
+      spellTick() {
+        this.playTone(320 + Math.random() * 240, 0.05, 'square');
+      },
+
+      win() {
+        this.vibrate([40, 50, 80]);
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, idx) => {
+          this.playTone(f, 0.13, 'triangle', idx * 0.08);
+        });
+      },
+
+      draw() {
+        this.vibrate(40);
+        this.playTone(440, 0.11, 'sine', 0);
+        this.playTone(440, 0.16, 'sine', 0.13);
+      },
+
+      countdownTick(urgent = false) {
+        if (urgent) this.vibrate(30);
+        this.playTone(urgent ? 880 : 580, 0.06, urgent ? 'sawtooth' : 'sine');
+      },
+
+      buzzer() {
+        this.vibrate([120, 60, 180]);
+        this.playTone(190, 0.3, 'sawtooth', 0);
+        this.playTone(145, 0.4, 'sawtooth', 0.18);
+      },
+
+      speak(text) {
+        if (this.muted || !('speechSynthesis' in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(text);
+          utter.lang = 'id-ID';
+          utter.rate = 1.04;
+          utter.pitch = 1.1;
+          window.speechSynthesis.speak(utter);
+        } catch (e) {}
+      }
+    };
+
+    /**
+     * =====================================================================
+     * 2. STATE GLOBAL
+     * =====================================================================
+     */
+    const GameState = {
+      mode: 'offline',     // 'offline' | 'online'
+      role: 'offline',     // 'offline' | 'host' | 'guest'
+      roomCode: '',
+      connected: false,
+      currentScreen: 'screenHome',
+      activeGame: null
+    };
+
+    /**
+     * =====================================================================
+     * 3. SISTEM ROOM P2P (PeerJS: limadasar-<KODE>) + SHARE LINK WA
+     * =====================================================================
+     */
+    const RoomManager = {
+      peer: null,
+      conn: null,
+      joinTimeout: null,
+      peerOpenTimeout: null,
+      PEER_PREFIX: 'limadasar-',
+
+      peerOptions() {
+        return {
+          host: '0.peerjs.com',
+          port: 443,
+          path: '/',
+          secure: true,
+          debug: 1,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              { urls: 'stun:stun1.l.google.com:19302' },
+              { urls: 'stun:stun.cloudflare.com:3478' },
+              // TURN relay: wajib agar bisa konek antar-rumah / data seluler (CGNAT)
+              { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+              { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+              { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+            ],
+            iceCandidatePoolSize: 4,
+            sdpSemantics: 'unified-plan'
+          }
+        };
+      },
+
+      generateCode() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = '';
+        for (let i = 0; i < 4; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      },
+
+      clearTimers() {
+        if (this.joinTimeout) clearTimeout(this.joinTimeout);
+        if (this.peerOpenTimeout) clearTimeout(this.peerOpenTimeout);
+        this.joinTimeout = null;
+        this.peerOpenTimeout = null;
+      },
+
+      cleanupPeer() {
+        this.clearTimers();
+        const connection = this.conn;
+        const peer = this.peer;
+        this.conn = null;
+        this.peer = null;
+        // Set false before closing transport so intentional cleanup is not mistaken
+        // for an unexpected remote disconnect by the close event handler.
+        GameState.connected = false;
+        if (connection) {
+          try { connection.close(); } catch (e) {}
+        }
+        if (peer) {
+          try { peer.destroy(); } catch (e) {}
+        }
+        AppNav.updateTopBar();
+      },
+
+      createRoom() {
+        AudioFX.click();
+        this.cleanupPeer();
+        GameState.mode = 'online';
+        GameState.role = 'host';
+        GameState.roomCode = this.generateCode();
+
+        document.getElementById('lobbyChoiceArea').style.display = 'none';
+        document.getElementById('guestJoinPanel').style.display = 'none';
+        document.getElementById('hostRoomPanel').style.display = 'block';
+        document.getElementById('hostCodeDisplay').textContent = GameState.roomCode;
+        document.getElementById('btnRetryHost').style.display = 'none';
+
+        const waitBanner = document.getElementById('hostWaitStatus');
+        waitBanner.className = 'status-banner warn';
+        waitBanner.textContent = '⏳ Menghubungkan ke server PeerJS...';
+        AppNav.updateTopBar();
+
+        if (typeof Peer === 'undefined') {
+          this.showHostError('browser-incompatible');
+          return;
+        }
+        this.openHostPeer(0);
+      },
+
+      openHostPeer(attempt) {
+        const waitBanner = document.getElementById('hostWaitStatus');
+        const roomCode = GameState.roomCode;
+        const peerId = this.PEER_PREFIX + roomCode;
+        let peer;
+        try {
+          peer = new Peer(peerId, this.peerOptions());
+        } catch (error) {
+          this.showHostError('browser-incompatible');
+          return;
+        }
+        this.peer = peer;
+
+        this.peerOpenTimeout = setTimeout(() => {
+          if (this.peer === peer && !peer.open) {
+            this.showHostError('network');
+          }
+        }, 15000);
+
+        peer.on('open', () => {
+          if (this.peer !== peer) return;
+          if (this.peerOpenTimeout) clearTimeout(this.peerOpenTimeout);
+          this.peerOpenTimeout = null;
+          document.getElementById('btnRetryHost').style.display = 'none';
+          waitBanner.className = 'status-banner info';
+          waitBanner.textContent = '⏳ Room siap. Bagikan kode ini dan tunggu temanmu bergabung.';
+        });
+
+        peer.on('connection', (incomingConn) => {
+          if (this.peer !== peer) {
+            try { incomingConn.close(); } catch (e) {}
+            return;
+          }
+          // A room accepts exactly one guest. Treat a pending first connection as occupied too.
+          if (this.conn && this.conn !== incomingConn) {
+            incomingConn.on('open', () => {
+              try { incomingConn.send({ type: 'ROOM_FULL' }); } catch (e) {}
+              setTimeout(() => { try { incomingConn.close(); } catch (e) {} }, 250);
+            });
+            return;
+          }
+          this.conn = incomingConn;
+          this.setupConnectionEvents(incomingConn);
+        });
+
+        peer.on('disconnected', () => {
+          if (this.peer !== peer || peer.destroyed) return;
+          waitBanner.className = 'status-banner warn';
+          waitBanner.textContent = '⚠️ Sinyal room terputus. Mencoba menyambung kembali...';
+          try { peer.reconnect(); } catch (error) {
+            this.showHostError('network');
+          }
+        });
+
+        peer.on('error', (error) => {
+          if (this.peer !== peer) return;
+          if (this.peerOpenTimeout) clearTimeout(this.peerOpenTimeout);
+          this.peerOpenTimeout = null;
+          if (error && error.type === 'unavailable-id' && attempt < 2) {
+            this.cleanupPeer();
+            GameState.roomCode = this.generateCode();
+            document.getElementById('hostCodeDisplay').textContent = GameState.roomCode;
+            waitBanner.className = 'status-banner warn';
+            waitBanner.textContent = '⏳ Kode room sedang dipakai. Membuat kode baru...';
+            AppNav.updateTopBar();
+            this.openHostPeer(attempt + 1);
+            return;
+          }
+          this.showHostError(error && error.type ? error.type : 'server-error');
+        });
+      },
+
+      showHostError(errorType) {
+        const waitBanner = document.getElementById('hostWaitStatus');
+        const messages = {
+          'browser-incompatible': '❌ Browser tidak mendukung PeerJS/WebRTC. Coba browser yang lebih baru.',
+          network: '⚠️ Server PeerJS tidak dapat dijangkau. Periksa internet, lalu coba buat room lagi.',
+          'server-error': '⚠️ Server PeerJS bermasalah. Coba lagi beberapa saat.',
+          'socket-error': '⚠️ Koneksi sinyal PeerJS gagal. Periksa jaringan lalu coba lagi.',
+          'socket-closed': '⚠️ Koneksi ke server PeerJS terputus. Coba buat room lagi.',
+          'ssl-unavailable': '⚠️ Koneksi aman PeerJS tidak tersedia di jaringan ini.',
+          'unavailable-id': '⚠️ Tidak mendapat ID room unik. Coba buat room lagi.'
+        };
+        waitBanner.className = 'status-banner error';
+        waitBanner.textContent = messages[errorType] || `⚠️ PeerJS gagal (${errorType}). Periksa internet lalu coba lagi.`;
+        document.getElementById('btnRetryHost').style.display = 'inline-flex';
+        this.cleanupPeer();
+      },
+
+      copyRoomCode() {
+        AudioFX.click();
+        const code = GameState.roomCode;
+        if (!code) return;
+        const temp = document.createElement('textarea');
+        temp.value = code;
+        document.body.appendChild(temp);
+        temp.select();
+        try { document.execCommand('copy'); } catch (e) {}
+        document.body.removeChild(temp);
+        const btn = document.getElementById('btnCopyCode');
+        if (btn) {
+          btn.textContent = '✅ Tersalin!';
+          setTimeout(() => { btn.textContent = '📋 Salin Kode'; }, 1600);
+        }
+      },
+
+      shareRoomLink() {
+        AudioFX.click();
+        const code = GameState.roomCode;
+        if (!code) return;
+        const baseUrl = `${window.location.origin}${window.location.pathname}`;
+        const shareUrl = `${baseUrl}?room=${code}`;
+        const shareText = `Ayo mabar Batu Gunting Kertas & ABCD Lima Dasar di HP! Masukkan Kode Room: *${code}* atau klik link ini:`;
+        if (navigator.share) {
+          navigator.share({
+            title: 'Mabar Arena Main Seru',
+            text: shareText,
+            url: shareUrl
+          }).catch(() => {});
+        } else {
+          const temp = document.createElement('textarea');
+          temp.value = `${shareText} ${shareUrl}`;
+          document.body.appendChild(temp);
+          temp.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(temp);
+          const waitBanner = document.getElementById('hostWaitStatus');
+          waitBanner.textContent = '✅ Link undangan disalin! Tempel di WhatsApp temanmu.';
+        }
+      },
+
+      showJoinForm(prefillCode = '') {
+        AudioFX.click();
+        document.getElementById('lobbyChoiceArea').style.display = 'none';
+        document.getElementById('hostRoomPanel').style.display = 'none';
+        document.getElementById('btnRetryHost').style.display = 'none';
+        document.getElementById('guestJoinPanel').style.display = 'block';
+        document.getElementById('guestJoinStatus').style.display = 'none';
+        document.getElementById('inputRoomCode').value = prefillCode;
+      },
+
+      joinRoom() {
+        AudioFX.click();
+        const codeInput = document.getElementById('inputRoomCode');
+        const code = (codeInput.value || '').trim().toUpperCase();
+        const statusEl = document.getElementById('guestJoinStatus');
+        codeInput.blur();
+
+        if (!/^[A-Z0-9]{4}$/.test(code)) {
+          statusEl.style.display = 'flex';
+          statusEl.className = 'status-banner error';
+          statusEl.textContent = '⚠️ Masukkan 4 karakter kode room yang valid.';
+          return;
+        }
+        if (typeof Peer === 'undefined') {
+          statusEl.style.display = 'flex';
+          statusEl.className = 'status-banner error';
+          statusEl.textContent = '❌ PeerJS belum termuat. Periksa internet atau muat ulang halaman.';
+          return;
+        }
+
+        this.cleanupPeer();
+        GameState.mode = 'online';
+        GameState.role = 'guest';
+        GameState.roomCode = code;
+        AppNav.updateTopBar();
+        const btnJoin = document.getElementById('btnJoinRoom');
+        btnJoin.disabled = true;
+        statusEl.style.display = 'flex';
+        statusEl.className = 'status-banner warn';
+        statusEl.textContent = `⏳ Menghubungkan ke room ${code}...`;
+
+        let peer;
+        try {
+          peer = new Peer(undefined, this.peerOptions());
+        } catch (error) {
+          this.handleJoinFailure('browser-incompatible');
+          return;
+        }
+        this.peer = peer;
+        this.joinTimeout = setTimeout(() => {
+          if (!GameState.connected && this.peer === peer) this.handleJoinFailure('peer-unavailable');
+        }, 15000);
+
+        peer.on('open', () => {
+          if (this.peer !== peer) return;
+          const hostPeerId = this.PEER_PREFIX + code;
+          let outgoingConn;
+          try {
+            outgoingConn = peer.connect(hostPeerId, { serialization: 'json' });
+          } catch (error) {
+            this.handleJoinFailure('peer-unavailable');
+            return;
+          }
+          this.conn = outgoingConn;
+          this.setupConnectionEvents(outgoingConn);
+        });
+
+        peer.on('disconnected', () => {
+          if (this.peer !== peer || peer.destroyed) return;
+          try { peer.reconnect(); } catch (error) {
+            this.handleJoinFailure('network');
+          }
+        });
+
+        peer.on('error', (error) => {
+          if (this.peer !== peer) return;
+          this.handleJoinFailure(error && error.type ? error.type : 'server-error');
+        });
+      },
+
+      handleJoinFailure(errorType) {
+        this.clearTimers();
+        const statusEl = document.getElementById('guestJoinStatus');
+        const messages = {
+          'peer-unavailable': '❌ Room tidak ditemukan atau sudah penuh. Periksa kodenya lalu coba lagi.',
+          'browser-incompatible': '❌ Browser tidak mendukung PeerJS/WebRTC. Coba browser yang lebih baru.',
+          network: '⚠️ Server PeerJS tidak dapat dijangkau. Periksa internet, lalu coba lagi.',
+          'server-error': '⚠️ Server PeerJS bermasalah. Coba lagi beberapa saat.',
+          'socket-error': '⚠️ Koneksi sinyal PeerJS gagal. Periksa jaringan lalu coba lagi.',
+          'socket-closed': '⚠️ Koneksi ke server PeerJS terputus. Coba lagi.',
+          'ssl-unavailable': '⚠️ Koneksi aman PeerJS tidak tersedia di jaringan ini.',
+          webrtc: '⚠️ Jaringan memblokir koneksi P2P. Coba jaringan Wi-Fi atau data seluler lain.'
+        };
+        this.cleanupPeer();
+        const btnJoin = document.getElementById('btnJoinRoom');
+        btnJoin.disabled = false;
+        statusEl.style.display = 'flex';
+        statusEl.className = 'status-banner error';
+        statusEl.textContent = messages[errorType] || `⚠️ Gagal bergabung (${errorType}). Periksa kode dan jaringan lalu coba lagi.`;
+      },
+
+      setupConnectionEvents(connection) {
+        connection.on('open', () => {
+          if (this.conn !== connection) return;
+          this.clearTimers();
+          document.getElementById('btnJoinRoom').disabled = false;
+          GameState.connected = true;
+          AppNav.updateTopBar();
+          AudioFX.win();
+          RPSGame.resetSessionScores();
+          document.getElementById('connectedBanner').style.display = 'flex';
+          document.getElementById('selectGameSubtitle').textContent =
+            'Mode Online (2 HP): Pilihan game otomatis tampil di kedua HP!';
+          AppNav.showScreen('screenSelectGame');
+        });
+
+        connection.on('data', (data) => {
+          if (this.conn === connection) this.handleIncomingData(data);
+        });
+
+        connection.on('close', () => {
+          if (this.conn !== connection) return;
+          if (GameState.connected) {
+            this.handleRemoteDisconnect();
+          } else if (GameState.role === 'guest') {
+            this.handleJoinFailure('peer-unavailable');
+          } else {
+            this.conn = null;
+            const waitBanner = document.getElementById('hostWaitStatus');
+            waitBanner.className = 'status-banner warn';
+            waitBanner.textContent = '⚠️ Teman gagal tersambung. Kode room masih bisa dipakai.';
+          }
+        });
+
+        connection.on('error', (error) => {
+          if (GameState.connected) {
+            this.handleRemoteDisconnect();
+          } else if (GameState.role === 'guest') {
+            this.handleJoinFailure(error && error.type ? error.type : 'peer-unavailable');
+          } else {
+            if (this.conn === connection) this.conn = null;
+            const waitBanner = document.getElementById('hostWaitStatus');
+            waitBanner.className = 'status-banner warn';
+            waitBanner.textContent = '⚠️ Koneksi pemain gagal. Teman dapat mencoba bergabung lagi.';
+          }
+        });
+      },
+
+      send(payload) {
+        if (!this.conn || !this.conn.open) {
+          if (GameState.connected) this.handleRemoteDisconnect();
+          return false;
+        }
+        try {
+          this.conn.send(payload);
+          return true;
+        } catch (error) {
+          this.handleRemoteDisconnect();
+          return false;
+        }
+      },
+
+      handleRemoteDisconnect() {
+        const wasConnected = GameState.connected;
+        ABCDGame.stopTimerInterval();
+        this.cleanupPeer();
+        if (wasConnected) {
+          AudioFX.buzzer();
+          document.getElementById('modalDisconnectMsg').textContent =
+            'Koneksi terputus! Temanmu keluar atau sinyal terputus.';
+          document.getElementById('modalDisconnect').classList.add('active');
+        }
+      },
+
+      handleIncomingData(msg) {
+        if (!msg || typeof msg !== 'object' || Array.isArray(msg) || typeof msg.type !== 'string') return;
+        const validChoice = (choice) => Object.prototype.hasOwnProperty.call(RPSGame.WEAPONS, choice);
+        const validNumber = (number) => Number.isInteger(number) && number >= 1 && number <= 20;
+        const validThemes = {
+          'Alat tulis': '📚',
+          'Alat makan': '🍽️',
+          'Peralatan sekolah': '🎒',
+          'Tumbuhan': '🌱',
+          'Hewan': '🐾'
+        };
+
+        switch (msg.type) {
+          case 'ROOM_FULL': {
+            if (GameState.role === 'guest') this.handleJoinFailure('peer-unavailable');
+            break;
+          }
+          case 'NAV_SELECT_GAME':
+            if (msg.game === 'rps' || msg.game === 'abcd') AppNav.enterGameScreen(msg.game, false);
+            break;
+          case 'NAV_RETURN_MENU':
+            ABCDGame.stopTimerInterval();
+            AppNav.showScreen('screenSelectGame');
+            break;
+          case 'RPS_GUEST_PICK':
+            if (GameState.role === 'host' && GameState.activeGame === 'rps' && !RPSGame.p2Choice && !RPSGame.isRevealing && validChoice(msg.choice)) {
+              RPSGame.p2Choice = msg.choice;
+              RPSGame.updateOnlineStatusUI();
+              RPSGame.checkHostOnlineResolve();
+            }
+            break;
+          case 'RPS_HOST_PICKED_NOTICE':
+            if (GameState.role === 'guest' && GameState.activeGame === 'rps' && !RPSGame.p1HasPickedOnline) {
+              RPSGame.p1HasPickedOnline = true;
+              RPSGame.updateOnlineStatusUI();
+            }
+            break;
+          case 'RPS_REVEAL': {
+            if (GameState.role !== 'guest' || GameState.activeGame !== 'rps' || !validChoice(msg.p1Choice) || !validChoice(msg.p2Choice)) break;
+            const winner = RPSGame.determineWinner(msg.p1Choice, msg.p2Choice);
+            const scoresValid = msg.scores && Number.isInteger(msg.scores.p1) && msg.scores.p1 >= 0 && Number.isInteger(msg.scores.p2) && msg.scores.p2 >= 0;
+            if (winner !== msg.winner || !scoresValid) break;
+            RPSGame.p1Choice = msg.p1Choice;
+            RPSGame.p2Choice = msg.p2Choice;
+            RPSGame.scores = { p1: msg.scores.p1, p2: msg.scores.p2 };
+            RPSGame.runSpellAndShowWinner(winner);
+            break;
+          }
+          case 'RPS_NEW_ROUND':
+            if (GameState.activeGame === 'rps') RPSGame.initRound(false);
+            break;
+          case 'ABCD_SELECT_THEME':
+            if (GameState.role === 'guest' && GameState.activeGame === 'abcd' && validThemes[msg.theme] === msg.emoji) {
+              ABCDGame.applyThemeAndStart(msg.theme, msg.emoji, false);
+            }
+            break;
+          case 'ABCD_GUEST_NUM':
+            if (GameState.role === 'host' && GameState.activeGame === 'abcd' && !ABCDGame.lockedP2 && validNumber(msg.num)) {
+              ABCDGame.numP2 = msg.num;
+              ABCDGame.lockedP2 = true;
+              ABCDGame.updateInputBoxesUI();
+            }
+            break;
+          case 'ABCD_HOST_LOCKED_NOTICE':
+            if (GameState.role === 'guest' && GameState.activeGame === 'abcd' && !ABCDGame.lockedP1) {
+              ABCDGame.lockedP1 = true;
+              ABCDGame.updateInputBoxesUI();
+            }
+            break;
+          case 'ABCD_REVEAL_LETTER': {
+            if (GameState.role !== 'guest' || GameState.activeGame !== 'abcd' || ABCDGame.calculationShown || !ABCDGame.lockedP1 || !ABCDGame.lockedP2) break;
+            if (!validNumber(msg.numP1) || !validNumber(msg.numP2) || msg.numP2 !== ABCDGame.numP2) break;
+            const total = msg.numP1 + msg.numP2;
+            const index = ((total - 1) % 26) + 1;
+            const letter = String.fromCharCode(64 + index);
+            if (msg.total !== total || msg.index !== index || msg.letter !== letter) break;
+            ABCDGame.calculationShown = true;
+            ABCDGame.numP1 = msg.numP1;
+            ABCDGame.showCalculationResult(msg.numP1, msg.numP2, total, index, letter);
+            break;
+          }
+          case 'ABCD_TIMER_TICK':
+            if (GameState.role === 'guest' && GameState.activeGame === 'abcd' && !ABCDGame.roundEnded && Number.isInteger(msg.timeLeft) && msg.timeLeft >= 0 && msg.timeLeft <= 10 && msg.timeLeft < ABCDGame.timeLeft) {
+              ABCDGame.timeLeft = msg.timeLeft;
+              ABCDGame.renderTimerUI(msg.timeLeft);
+              if (msg.timeLeft === 0) ABCDGame.triggerTimeUpUI();
+            }
+            break;
+          case 'ABCD_TIME_UP':
+            if (GameState.role === 'guest' && GameState.activeGame === 'abcd') ABCDGame.triggerTimeUpUI();
+            break;
+          case 'ABCD_ANSWERED':
+            if ((msg.byPlayer === 'Player 1' || msg.byPlayer === 'Player 2' || msg.byPlayer === '') && GameState.activeGame === 'abcd') {
+              ABCDGame.triggerAnsweredCelebration(msg.byPlayer, false);
+            }
+            break;
+          case 'ABCD_NEW_ROUND':
+            if (GameState.activeGame === 'abcd' && ABCDGame.currentTheme) ABCDGame.startNewRoundSameTheme(false);
+            break;
+          case 'ABCD_CHANGE_THEME':
+            if (GameState.activeGame === 'abcd') ABCDGame.openThemeSelection(false);
+            break;
+          default:
+            // Ignore unknown message types so stale or foreign payloads cannot break a round.
+            break;
+        }
+      }
+    };
+
+    /**
+     * =====================================================================
+     * 4. NAVIGASI LAYAR & TOPBAR SMARTPHONE
+     * =====================================================================
+     */
+    const AppNav = {
+      showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach((el) => el.classList.remove('active'));
+        const target = document.getElementById(screenId);
+        if (target) target.classList.add('active');
+        GameState.currentScreen = screenId;
+        this.updateTopBar();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      },
+
+      updateTopBar() {
+        const badgeRole = document.getElementById('badgeRole');
+        const badgeConn = document.getElementById('badgeConn');
+        const badgeRoom = document.getElementById('badgeRoom');
+
+        if (GameState.mode === 'offline') {
+          badgeRole.className = 'pill-badge role-offline';
+          badgeRole.textContent = '📱 Offline (1 HP)';
+          badgeConn.style.display = 'none';
+          badgeRoom.style.display = 'none';
+        } else {
+          badgeRole.className = GameState.role === 'host' ? 'pill-badge role-host' : 'pill-badge role-guest';
+          badgeRole.textContent = GameState.role === 'host' ? '👑 Host (P1)' : '🎮 Guest (P2)';
+
+          badgeConn.style.display = 'inline-flex';
+          if (GameState.connected) {
+            badgeConn.className = 'pill-badge conn-online';
+            badgeConn.textContent = '🟢 Terhubung';
+          } else {
+            badgeConn.className = 'pill-badge conn-offline';
+            badgeConn.textContent = '🔴 Terputus';
+          }
+
+          if (GameState.roomCode) {
+            badgeRoom.style.display = 'inline-flex';
+            badgeRoom.textContent = '#' + GameState.roomCode;
+          } else {
+            badgeRoom.style.display = 'none';
+          }
+        }
+      },
+
+      startOfflineMode() {
+        AudioFX.click();
+        RoomManager.cleanupPeer();
+        GameState.mode = 'offline';
+        GameState.role = 'offline';
+        GameState.roomCode = '';
+        RPSGame.resetSessionScores();
+
+        document.getElementById('connectedBanner').style.display = 'none';
+        document.getElementById('selectGameSubtitle').textContent =
+          'Mode Offline: Main bergantian di 1 HP ini!';
+        this.showScreen('screenSelectGame');
+      },
+
+      openOnlineLobby(prefillCode = '') {
+        AudioFX.click();
+        RoomManager.cleanupPeer();
+        GameState.mode = 'online';
+        document.getElementById('lobbyChoiceArea').style.display = 'flex';
+        document.getElementById('hostRoomPanel').style.display = 'none';
+        document.getElementById('guestJoinPanel').style.display = 'none';
+        this.showScreen('screenOnlineLobby');
+
+        if (prefillCode) {
+          RoomManager.showJoinForm(prefillCode);
+        }
+      },
+
+      backToHome() {
+        AudioFX.click();
+        RoomManager.cleanupPeer();
+        GameState.mode = 'offline';
+        GameState.role = 'offline';
+        this.showScreen('screenHome');
+      },
+
+      confirmGoHome() {
+        AudioFX.click();
+        if (GameState.currentScreen === 'screenHome') return;
+        ABCDGame.stopTimerInterval();
+        if (GameState.mode === 'online' && GameState.connected) {
+          this.returnToGameMenu();
+        } else {
+          this.leaveToMainMenu();
+        }
+      },
+
+      leaveToMainMenu() {
+        AudioFX.click();
+        ABCDGame.stopTimerInterval();
+        RoomManager.cleanupPeer();
+        GameState.mode = 'offline';
+        GameState.role = 'offline';
+        this.showScreen('screenHome');
+      },
+
+      launchGame(gameKey) {
+        AudioFX.click();
+        this.enterGameScreen(gameKey, true);
+      },
+
+      enterGameScreen(gameKey, broadcast = true) {
+        GameState.activeGame = gameKey;
+        if (GameState.mode === 'online' && broadcast) {
+          RoomManager.send({ type: 'NAV_SELECT_GAME', game: gameKey });
+        }
+
+        if (gameKey === 'rps') {
+          RPSGame.initRound(false);
+          this.showScreen('screenGameRPS');
+        } else if (gameKey === 'abcd') {
+          ABCDGame.openThemeSelection(false);
+          this.showScreen('screenGameABCD');
+        }
+      },
+
+      returnToGameMenu() {
+        AudioFX.click();
+        ABCDGame.stopTimerInterval();
+        if (GameState.mode === 'online' && GameState.connected) {
+          RoomManager.send({ type: 'NAV_RETURN_MENU' });
+        }
+        this.showScreen('screenSelectGame');
+      },
+
+      closeModalAndReset() {
+        AudioFX.click();
+        document.getElementById('modalDisconnect').classList.remove('active');
+        RoomManager.cleanupPeer();
+        GameState.mode = 'offline';
+        GameState.role = 'offline';
+        this.showScreen('screenHome');
+      },
+
+      openPublishGuide() {
+        AudioFX.click();
+        document.getElementById('modalPublishGuide').classList.add('active');
+      },
+
+      closePublishGuide() {
+        AudioFX.click();
+        document.getElementById('modalPublishGuide').classList.remove('active');
+      }
+    };
+
+    /**
+     * =====================================================================
+     * 5. LOGIKA GAME 1 — BATU GUNTING KERTAS (RPS)
+     * =====================================================================
+     */
+    const RPSGame = {
+      scores: { p1: 0, p2: 0 },
+      p1Choice: null,
+      p2Choice: null,
+      p1HasPickedOnline: false,
+      offlineTurn: 1,
+      isRevealing: false,
+
+      WEAPONS: {
+        batu: { emoji: '✊', label: 'Batu', beats: 'gunting' },
+        gunting: { emoji: '✌️', label: 'Gunting', beats: 'kertas' },
+        kertas: { emoji: '✋', label: 'Kertas', beats: 'batu' }
+      },
+
+      resetSessionScores() {
+        this.scores = { p1: 0, p2: 0 };
+        this.updateScoreUI();
+      },
+
+      updateScoreUI() {
+        document.getElementById('rpsScoreP1').textContent = this.scores.p1;
+        document.getElementById('rpsScoreP2').textContent = this.scores.p2;
+
+        if (GameState.mode === 'online') {
+          document.getElementById('rpsLabelP1').textContent =
+            GameState.role === 'host' ? '👑 P1 (KAMU)' : '👑 P1 (HOST)';
+          document.getElementById('rpsLabelP2').textContent =
+            GameState.role === 'guest' ? '🎮 P2 (KAMU)' : '🎮 P2 (GUEST)';
+        } else {
+          document.getElementById('rpsLabelP1').textContent = '👑 PLAYER 1';
+          document.getElementById('rpsLabelP2').textContent = '🎮 PLAYER 2';
+        }
+      },
+
+      initRound(broadcast = false) {
+        this.p1Choice = null;
+        this.p2Choice = null;
+        this.p1HasPickedOnline = false;
+        this.offlineTurn = 1;
+        this.isRevealing = false;
+
+        this.updateScoreUI();
+
+        document.getElementById('rpsCardP1').classList.remove('winner-glow', 'spell-shake');
+        document.getElementById('rpsCardP2').classList.remove('winner-glow', 'spell-shake');
+        document.getElementById('rpsEmojiP1').textContent = '❓';
+        document.getElementById('rpsEmojiP2').textContent = '❓';
+        document.getElementById('rpsResultBanner').style.display = 'none';
+        document.getElementById('btnRpsPlayAgain').style.display = 'none';
+
+        document.querySelectorAll('.weapon-card-btn').forEach((btn) => {
+          btn.disabled = false;
+          btn.classList.remove('selected');
+        });
+
+        const banner = document.getElementById('rpsTurnBanner');
+        banner.className = 'status-banner info';
+
+        if (GameState.mode === 'offline') {
+          banner.textContent = '👉 Giliran Player 1: Ketuk senjatamu!';
+          document.getElementById('rpsStatusP1').textContent = '⏳ Memilih...';
+          document.getElementById('rpsStatusP2').textContent = 'Menunggu P1...';
+        } else {
+          banner.textContent = '⚡ Ketuk senjatamu sekarang! Pilihanmu rahasia.';
+          document.getElementById('rpsStatusP1').textContent = '⏳ Memilih...';
+          document.getElementById('rpsStatusP2').textContent = '⏳ Memilih...';
+        }
+
+        if (broadcast && GameState.mode === 'online') {
+          RoomManager.send({ type: 'RPS_NEW_ROUND' });
+        }
+      },
+
+      pickWeapon(weaponKey) {
+        if (!Object.prototype.hasOwnProperty.call(this.WEAPONS, weaponKey) || this.isRevealing) return;
+        if (GameState.mode === 'online') {
+          if (!GameState.connected) return;
+          if (GameState.role === 'host' && this.p1Choice) return;
+          if (GameState.role === 'guest' && this.p2Choice) return;
+        }
+        AudioFX.lock();
+
+        if (GameState.mode === 'offline') {
+          if (this.offlineTurn === 1) {
+            this.p1Choice = weaponKey;
+            this.offlineTurn = 2;
+
+            document.getElementById('rpsEmojiP1').textContent = '🔒';
+            document.getElementById('rpsStatusP1').textContent = '✅ Terkunci!';
+            document.getElementById('rpsStatusP2').textContent = '⏳ Giliran P2...';
+
+            const banner = document.getElementById('rpsTurnBanner');
+            banner.className = 'status-banner warn';
+            banner.textContent = '📱 Berikan HP ke Player 2 untuk memilih!';
+          } else if (this.offlineTurn === 2) {
+            this.p2Choice = weaponKey;
+            document.getElementById('rpsEmojiP2').textContent = '🔒';
+            document.getElementById('rpsStatusP2').textContent = '✅ Terkunci!';
+
+            const winner = this.determineWinner(this.p1Choice, this.p2Choice);
+            if (winner === 'p1') this.scores.p1++;
+            if (winner === 'p2') this.scores.p2++;
+
+            this.runSpellAndShowWinner(winner);
+          }
+        } else {
+          const btnMap = {
+            batu: 'btnWeaponBatu',
+            gunting: 'btnWeaponGunting',
+            kertas: 'btnWeaponKertas'
+          };
+          document.querySelectorAll('.weapon-card-btn').forEach((b) => {
+            b.disabled = true;
+            b.classList.remove('selected');
+          });
+          document.getElementById(btnMap[weaponKey]).classList.add('selected');
+
+          if (GameState.role === 'host') {
+            this.p1Choice = weaponKey;
+            RoomManager.send({ type: 'RPS_HOST_PICKED_NOTICE' });
+            this.updateOnlineStatusUI();
+            this.checkHostOnlineResolve();
+          } else if (GameState.role === 'guest') {
+            if (!RoomManager.send({ type: 'RPS_GUEST_PICK', choice: weaponKey })) return;
+            this.p2Choice = weaponKey;
+            this.updateOnlineStatusUI();
+          }
+        }
+      },
+
+      updateOnlineStatusUI() {
+        const w = this.WEAPONS;
+        if (GameState.role === 'host') {
+          if (this.p1Choice) {
+            document.getElementById('rpsEmojiP1').textContent = w[this.p1Choice].emoji;
+            document.getElementById('rpsStatusP1').textContent = '✅ ' + w[this.p1Choice].label;
+          }
+          if (this.p2Choice) {
+            document.getElementById('rpsEmojiP2').textContent = '🔒';
+            document.getElementById('rpsStatusP2').textContent = '✅ Siap!';
+          }
+        } else {
+          if (this.p1HasPickedOnline) {
+            document.getElementById('rpsEmojiP1').textContent = '🔒';
+            document.getElementById('rpsStatusP1').textContent = '✅ Siap!';
+          }
+          if (this.p2Choice) {
+            document.getElementById('rpsEmojiP2').textContent = w[this.p2Choice].emoji;
+            document.getElementById('rpsStatusP2').textContent = '✅ ' + w[this.p2Choice].label;
+          }
+        }
+      },
+
+      checkHostOnlineResolve() {
+        if (GameState.role !== 'host') return;
+        if (this.p1Choice && this.p2Choice && !this.isRevealing) {
+          const winner = this.determineWinner(this.p1Choice, this.p2Choice);
+          if (winner === 'p1') this.scores.p1++;
+          if (winner === 'p2') this.scores.p2++;
+
+          RoomManager.send({
+            type: 'RPS_REVEAL',
+            p1Choice: this.p1Choice,
+            p2Choice: this.p2Choice,
+            winner: winner,
+            scores: this.scores
+          });
+
+          this.runSpellAndShowWinner(winner);
+        }
+      },
+
+      determineWinner(c1, c2) {
+        if (c1 === c2) return 'draw';
+        if (this.WEAPONS[c1].beats === c2) return 'p1';
+        return 'p2';
+      },
+
+      runSpellAndShowWinner(winner) {
+        this.isRevealing = true;
+        document.querySelectorAll('.weapon-card-btn').forEach((b) => (b.disabled = true));
+
+        const card1 = document.getElementById('rpsCardP1');
+        const card2 = document.getElementById('rpsCardP2');
+        const emoji1 = document.getElementById('rpsEmojiP1');
+        const emoji2 = document.getElementById('rpsEmojiP2');
+        const status1 = document.getElementById('rpsStatusP1');
+        const status2 = document.getElementById('rpsStatusP2');
+        const banner = document.getElementById('rpsTurnBanner');
+
+        banner.className = 'status-banner warn';
+        banner.textContent = '✨ Batu… Gunting… Kertas… ✨';
+        status1.textContent = 'Membuka...';
+        status2.textContent = 'Membuka...';
+
+        card1.classList.add('spell-shake');
+        card2.classList.add('spell-shake');
+
+        const cycle = ['✊', '✌️', '✋'];
+        let step = 0;
+
+        const spellInterval = setInterval(() => {
+          emoji1.textContent = cycle[step % 3];
+          emoji2.textContent = cycle[(step + 1) % 3];
+          AudioFX.spellTick();
+          step++;
+        }, 135);
+
+        setTimeout(() => {
+          clearInterval(spellInterval);
+          card1.classList.remove('spell-shake');
+          card2.classList.remove('spell-shake');
+
+          const w1 = this.WEAPONS[this.p1Choice];
+          const w2 = this.WEAPONS[this.p2Choice];
+
+          emoji1.textContent = w1.emoji;
+          emoji2.textContent = w2.emoji;
+          status1.textContent = w1.label;
+          status2.textContent = w2.label;
+
+          this.updateScoreUI();
+
+          const resBanner = document.getElementById('rpsResultBanner');
+          resBanner.style.display = 'block';
+
+          if (winner === 'p1') {
+            resBanner.textContent = '🎉 Player 1 Menang!';
+            resBanner.style.background = '#badc58';
+            card1.classList.add('winner-glow');
+            AudioFX.win();
+            AudioFX.speak('Player satu menang!');
+          } else if (winner === 'p2') {
+            resBanner.textContent = '🎉 Player 2 Menang!';
+            resBanner.style.background = '#7ed6df';
+            card2.classList.add('winner-glow');
+            AudioFX.win();
+            AudioFX.speak('Player dua menang!');
+          } else {
+            resBanner.textContent = '🤝 Seri!';
+            resBanner.style.background = '#ffeaa7';
+            AudioFX.draw();
+            AudioFX.speak('Seri!');
+          }
+
+          banner.className = 'status-banner success';
+          banner.textContent = `${w1.label} ${w1.emoji} vs ${w2.emoji} ${w2.label}`;
+          document.getElementById('btnRpsPlayAgain').style.display = 'inline-flex';
+        }, 1450);
+      },
+
+      requestNewRound() {
+        AudioFX.click();
+        this.initRound(true);
+      }
+    };
+
+    /**
+     * =====================================================================
+     * 6. LOGIKA GAME 2 — ABCD LIMA DASAR (DENGAN QUICK-TAP PAD 1-20)
+     * =====================================================================
+     */
+    const ABCDGame = {
+      currentTheme: '',
+      currentEmoji: '',
+      numP1: 5,
+      numP2: 5,
+      lockedP1: false,
+      lockedP2: false,
+      activePadTarget: 1, // 1 = P1, 2 = P2
+      timerInterval: null,
+      timeLeft: 10,
+      roundEnded: false,
+      calculationShown: false,
+
+      HINTS: {
+        'Alat tulis': {
+          A: 'Amplop, Alat gambar', B: 'Buku, Bolpoin, Busur', C: 'Cat air, Crayon', D: 'Diary',
+          E: 'Eraser, Etiket', F: 'Folio', G: 'Gunting, Garisan', H: 'Highlighter, HVS',
+          I: 'Isi staples, Isi pensil', J: 'Jangka, Jurnal', K: 'Kertas, Kapur, Kuas', L: 'Lem, Label',
+          M: 'Map, Mistar', N: 'Notes, Notebook', O: 'Origami', P: 'Pensil, Penghapus, Pulpen',
+          Q: 'Quill (Pena bulu)', R: 'Rautan, Rol', S: 'Spidol, Stabilo, Staples', T: 'Tipe-X, Tinta',
+          U: 'Ukuran/Penggaris', V: 'Vernis gambar', W: 'Whiteboard', X: 'X-acto cutter',
+          Y: 'Yoyo ID card', Z: 'Zipper bag'
+        },
+        'Alat makan': {
+          A: 'Alat kukus, Alas piring', B: 'Botol minum, Baskom', C: 'Cangkir, Centong, Cobek', D: 'Dandang',
+          E: 'Ember es', F: 'Flask', G: 'Garpu, Gelas', H: 'Hotpot',
+          I: 'Irus (Sendok sayur)', J: 'Jug air, Jar', K: 'Kompor, Kuali, Kotak makan', L: 'Loyang, Lepek',
+          M: 'Mangkok, Mug', N: 'Nampan', O: 'Oven', P: 'Piring, Panci, Pisau',
+          Q: 'Quart jar', R: 'Rantang, Rice cooker', S: 'Sendok, Sumpit, Sedotan', T: 'Teko, Termos, Talenan',
+          U: 'Ulekan', V: 'Vas meja', W: 'Wajan, Wadah saji', X: 'Xylophone cup',
+          Y: 'Yogurt bowl', Z: 'Zester'
+        },
+        'Peralatan sekolah': {
+          A: 'Absensi, Atlas', B: 'Baju seragam, Bangku', C: 'Celana sekolah, Catatan', D: 'Dasi',
+          E: 'Ensiklopedia', F: 'Flashdisk', G: 'Globe, Gantungan tas', H: 'Handuk olahraga',
+          I: 'Ikat pinggang, ID pelajar', J: 'Jam dinding, Jas lab', K: 'Kursi, Kaos kaki, Kalkulator', L: 'Loker, Laptop',
+          M: 'Meja belajar, Mikroskop', N: 'Name tag', O: 'Organiser meja', P: 'Papan tulis, Proyektor',
+          Q: 'Quiz board', R: 'Ransel, Rapor', S: 'Sepatu, Seragam, Sapu', T: 'Tas sekolah, Topi',
+          U: 'UKS kit', V: 'Vest (Rompi)', W: 'Whiteboard', X: 'Xilofon sekolah',
+          Y: 'Yearbook', Z: 'Zipper pouch'
+        },
+        'Tumbuhan': {
+          A: 'Anggrek, Apel, Alpukat', B: 'Bambu, Bayam, Beringin', C: 'Cabai, Cemara, Cengkeh', D: 'Durian, Dahlia',
+          E: 'Edelweis', F: 'Flamboyan', G: 'Gandum', H: 'Hortensia',
+          I: 'Ilalang', J: 'Jagung, Jambu, Jahe', K: 'Kelapa, Kaktus, Kangkung', L: 'Lavender, Lidah buaya',
+          M: 'Mawar, Melati, Mangga', N: 'Nanas, Nangka', O: 'Orchid', P: 'Padi, Pisang, Pepaya',
+          Q: 'Quinoa', R: 'Rambutan, Rumput', S: 'Sawi, Semangka, Singkong', T: 'Tomat, Teratai, Teh',
+          U: 'Ubi jalar', V: 'Vanili', W: 'Wortel', X: 'Xigua (Semangka)',
+          Y: 'Yucca', Z: 'Zaitun'
+        },
+        'Hewan': {
+          A: 'Ayam, Anjing, Angsa', B: 'Bebek, Beruang, Buaya', C: 'Cicak, Cacing, Capung', D: 'Domba, Duyung',
+          E: 'Elang, Entok', F: 'Flamingo', G: 'Gajah, Gurita, Gorila', H: 'Harimau, Hiu, Hamster',
+          I: 'Ikan, Itik, Iguana', J: 'Jerapah, Jangkrik', K: 'Kucing, Kuda, Kelinci, Kambing', L: 'Lumba-lumba, Lebah, Landak',
+          M: 'Monyet, Merak, Macan', N: 'Nyamuk, Nuri', O: 'Orangutan', P: 'Panda, Penguin, Paus',
+          Q: 'Quokka', R: 'Rusa, Rajawali', S: 'Singa, Sapi, Semut', T: 'Tikus, Tupai, Tokek',
+          U: 'Ular, Udang, Unta', V: 'Viper', W: 'Walabi, Walet', X: 'X-ray fish',
+          Y: 'Yuyu, Yak', Z: 'Zebra'
+        }
+      },
+
+      // Buat 20 tombol angka (1–20) di layar HP
+      buildQuickNumpad() {
+        const grid = document.getElementById('numpadGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+        for (let i = 1; i <= 20; i++) {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'numpad-key';
+          btn.id = 'numKey_' + i;
+          btn.textContent = i;
+          btn.onclick = () => this.selectFromQuickPad(i);
+          grid.appendChild(btn);
+        }
+      },
+
+      highlightQuickPad(val) {
+        for (let i = 1; i <= 20; i++) {
+          const k = document.getElementById('numKey_' + i);
+          if (k) {
+            if (i === val) k.classList.add('active-num');
+            else k.classList.remove('active-num');
+          }
+        }
+      },
+
+      focusPad(playerNum) {
+        if (GameState.mode === 'offline') {
+          if (playerNum === 1 && !this.lockedP1) this.activePadTarget = 1;
+          if (playerNum === 2 && this.lockedP1 && !this.lockedP2) this.activePadTarget = 2;
+        }
+        this.updateInputBoxesUI();
+      },
+
+      selectFromQuickPad(val) {
+        if (!Number.isInteger(val) || val < 1 || val > 20) return;
+        AudioFX.click();
+        if (GameState.mode === 'offline') {
+          if (!this.lockedP1) {
+            this.numP1 = val;
+            document.getElementById('dispNumP1').textContent = val;
+            this.highlightQuickPad(val);
+          } else if (!this.lockedP2) {
+            this.numP2 = val;
+            document.getElementById('dispNumP2').textContent = val;
+            this.highlightQuickPad(val);
+          }
+        } else {
+          if (GameState.role === 'host' && !this.lockedP1) {
+            this.numP1 = val;
+            document.getElementById('dispNumP1').textContent = val;
+            this.highlightQuickPad(val);
+          } else if (GameState.role === 'guest' && !this.lockedP2) {
+            this.numP2 = val;
+            document.getElementById('dispNumP2').textContent = val;
+            this.highlightQuickPad(val);
+          }
+        }
+      },
+
+      openThemeSelection(broadcast = false) {
+        this.stopTimerInterval();
+        document.getElementById('abcdThemeStage').style.display = 'block';
+        document.getElementById('abcdPlayStage').style.display = 'none';
+
+        const isGuestOnline = GameState.mode === 'online' && GameState.role === 'guest';
+        document.querySelectorAll('.theme-card-btn').forEach((btn) => {
+          btn.disabled = isGuestOnline;
+        });
+
+        document.getElementById('abcdGuestWaitTheme').style.display = isGuestOnline ? 'flex' : 'none';
+        document.getElementById('abcdThemePrompt').textContent = isGuestOnline
+          ? 'Menunggu Host (Player 1) memilih tema...'
+          : 'Ketuk salah satu tema untuk mulai bermain:';
+
+        if (broadcast && GameState.mode === 'online') {
+          RoomManager.send({ type: 'ABCD_CHANGE_THEME' });
+        }
+      },
+
+      selectTheme(themeName, emoji) {
+        if (GameState.mode === 'online' && GameState.role === 'guest') return;
+        AudioFX.click();
+        this.applyThemeAndStart(themeName, emoji, true);
+      },
+
+      applyThemeAndStart(themeName, emoji, broadcast = false) {
+        this.currentTheme = themeName;
+        this.currentEmoji = emoji;
+
+        if (broadcast && GameState.mode === 'online' && GameState.role === 'host') {
+          RoomManager.send({
+            type: 'ABCD_SELECT_THEME',
+            theme: themeName,
+            emoji: emoji
+          });
+        }
+
+        document.getElementById('abcdThemeStage').style.display = 'none';
+        document.getElementById('abcdPlayStage').style.display = 'block';
+        document.getElementById('abcdActiveThemeBadge').textContent = `${emoji} ${themeName}`;
+
+        const btnChangeTheme = document.getElementById('btnChangeThemeABCD');
+        btnChangeTheme.disabled = GameState.mode === 'online' && GameState.role === 'guest';
+
+        this.startNewRoundSameTheme(false);
+      },
+
+      startNewRoundSameTheme(broadcast = false) {
+        this.stopTimerInterval();
+        this.lockedP1 = false;
+        this.lockedP2 = false;
+        this.roundEnded = false;
+        this.calculationShown = false;
+        this.numP1 = 5;
+        this.numP2 = 5;
+
+        document.getElementById('dispNumP1').textContent = 5;
+        document.getElementById('dispNumP2').textContent = 5;
+        document.getElementById('abcdInputSection').style.display = 'block';
+        document.getElementById('abcdResultSection').style.display = 'none';
+
+        AudioFX.speak('Pancasila Lima Dasar!');
+
+        this.updateInputBoxesUI();
+
+        if (broadcast && GameState.mode === 'online') {
+          RoomManager.send({ type: 'ABCD_NEW_ROUND' });
+        }
+      },
+
+      stepNumber(playerNum, delta) {
+        if (![1, 2].includes(playerNum) || ![-1, 1].includes(delta)) return;
+        const canEdit = GameState.mode === 'offline'
+          ? (playerNum === 1 ? !this.lockedP1 : this.lockedP1 && !this.lockedP2)
+          : (GameState.role === 'host' ? playerNum === 1 && !this.lockedP1 : playerNum === 2 && !this.lockedP2);
+        if (!canEdit) return;
+        AudioFX.click();
+        if (playerNum === 1) {
+          this.numP1 = Math.max(1, Math.min(20, this.numP1 + delta));
+          document.getElementById('dispNumP1').textContent = this.numP1;
+          this.highlightQuickPad(this.numP1);
+        } else {
+          this.numP2 = Math.max(1, Math.min(20, this.numP2 + delta));
+          document.getElementById('dispNumP2').textContent = this.numP2;
+          this.highlightQuickPad(this.numP2);
+        }
+      },
+
+      updateInputBoxesUI() {
+        const p1Wrap = document.getElementById('p1StepperWrap');
+        const p2Wrap = document.getElementById('p2StepperWrap');
+        const p1Mask = document.getElementById('p1MaskedWrap');
+        const p2Mask = document.getElementById('p2MaskedWrap');
+        const btnP1 = document.getElementById('btnSubmitNumP1');
+        const btnP2 = document.getElementById('btnSubmitNumP2');
+        const stP1 = document.getElementById('statusNumP1');
+        const stP2 = document.getElementById('statusNumP2');
+        const box1 = document.getElementById('boxCardP1');
+        const box2 = document.getElementById('boxCardP2');
+        const numpadBox = document.getElementById('quickNumpadBox');
+        const numpadLabel = document.getElementById('numpadTargetLabel');
+        const btnCalc = document.getElementById('btnCalculateABCD');
+        const waitCalc = document.getElementById('abcdWaitCalcBanner');
+
+        box1.classList.remove('active-turn');
+        box2.classList.remove('active-turn');
+
+        if (GameState.mode === 'offline') {
+          btnP1.style.display = 'inline-flex';
+          btnP2.style.display = 'inline-flex';
+          btnP1.textContent = '🔒 Kunci P1';
+          btnP2.textContent = '🔒 Kunci P2';
+
+          if (!this.lockedP1) {
+            box1.classList.add('active-turn');
+            p1Wrap.style.display = 'flex';
+            p1Mask.style.display = 'none';
+            btnP1.disabled = false;
+            stP1.textContent = '👉 Giliran P1 (1–20)';
+
+            p2Wrap.style.display = 'flex';
+            p2Mask.style.display = 'none';
+            btnP2.disabled = true;
+            stP2.textContent = 'Menunggu P1...';
+
+            numpadBox.style.display = 'block';
+            numpadLabel.textContent = '⚡ Ketuk Angka Player 1 (1–20):';
+            this.highlightQuickPad(this.numP1);
+          } else if (this.lockedP1 && !this.lockedP2) {
+            box2.classList.add('active-turn');
+            p1Wrap.style.display = 'none';
+            p1Mask.style.display = 'inline-flex';
+            p1Mask.textContent = '🔒 Siap';
+            btnP1.disabled = true;
+            stP1.textContent = '✅ Terkunci';
+
+            p2Wrap.style.display = 'flex';
+            p2Mask.style.display = 'none';
+            btnP2.disabled = false;
+            stP2.textContent = '👉 Giliran P2 (1–20)';
+
+            numpadBox.style.display = 'block';
+            numpadLabel.textContent = '⚡ Ketuk Angka Player 2 (1–20):';
+            this.highlightQuickPad(this.numP2);
+          } else {
+            p1Wrap.style.display = 'none';
+            p1Mask.style.display = 'inline-flex';
+            p1Mask.textContent = '🔒 Siap';
+            btnP1.disabled = true;
+            stP1.textContent = '✅ Terkunci';
+
+            p2Wrap.style.display = 'none';
+            p2Mask.style.display = 'inline-flex';
+            p2Mask.textContent = '🔒 Siap';
+            btnP2.disabled = true;
+            stP2.textContent = '✅ Terkunci';
+
+            numpadBox.style.display = 'none';
+          }
+
+          btnCalc.style.display = 'inline-flex';
+          btnCalc.disabled = !(this.lockedP1 && this.lockedP2);
+          waitCalc.style.display = 'none';
+        } else {
+          // MODE ONLINE 2 HP
+          btnP1.textContent = '📤 Kirim Angka';
+          btnP2.textContent = '📤 Kirim Angka';
+
+          if (GameState.role === 'host') {
+            if (!this.lockedP1) box1.classList.add('active-turn');
+            p1Wrap.style.display = this.lockedP1 ? 'none' : 'flex';
+            p1Mask.style.display = this.lockedP1 ? 'inline-flex' : 'none';
+            p1Mask.textContent = 'Angka: ' + this.numP1;
+            btnP1.style.display = 'inline-flex';
+            btnP1.disabled = this.lockedP1;
+            stP1.textContent = this.lockedP1 ? '✅ Terkirim!' : '👉 Pilih 1–20';
+
+            p2Wrap.style.display = 'none';
+            p2Mask.style.display = 'inline-flex';
+            p2Mask.textContent = this.lockedP2 ? '🔒 Siap' : '⏳...';
+            btnP2.style.display = 'none';
+            stP2.textContent = this.lockedP2 ? '✅ Guest Siap!' : 'Menunggu Guest...';
+
+            numpadBox.style.display = this.lockedP1 ? 'none' : 'block';
+            numpadLabel.textContent = '⚡ Ketuk Angkamu (1–20):';
+            this.highlightQuickPad(this.numP1);
+
+            btnCalc.style.display = 'inline-flex';
+            btnCalc.disabled = !(this.lockedP1 && this.lockedP2);
+            waitCalc.style.display = 'none';
+          } else {
+            p1Wrap.style.display = 'none';
+            p1Mask.style.display = 'inline-flex';
+            p1Mask.textContent = this.lockedP1 ? '🔒 Siap' : '⏳...';
+            btnP1.style.display = 'none';
+            stP1.textContent = this.lockedP1 ? '✅ Host Siap!' : 'Menunggu Host...';
+
+            if (!this.lockedP2) box2.classList.add('active-turn');
+            p2Wrap.style.display = this.lockedP2 ? 'none' : 'flex';
+            p2Mask.style.display = this.lockedP2 ? 'inline-flex' : 'none';
+            p2Mask.textContent = 'Angka: ' + this.numP2;
+            btnP2.style.display = 'inline-flex';
+            btnP2.disabled = this.lockedP2;
+            stP2.textContent = this.lockedP2 ? '✅ Terkirim!' : '👉 Pilih 1–20';
+
+            numpadBox.style.display = this.lockedP2 ? 'none' : 'block';
+            numpadLabel.textContent = '⚡ Ketuk Angkamu (1–20):';
+            this.highlightQuickPad(this.numP2);
+
+            btnCalc.style.display = 'none';
+            waitCalc.style.display = this.lockedP1 && this.lockedP2 ? 'flex' : 'none';
+          }
+        }
+      },
+
+      submitNumber(playerNum) {
+        if (![1, 2].includes(playerNum)) return;
+        const number = playerNum === 1 ? this.numP1 : this.numP2;
+        if (!Number.isInteger(number) || number < 1 || number > 20) return;
+        if (GameState.mode === 'offline') {
+          if (playerNum === 1 && this.lockedP1) return;
+          if (playerNum === 2 && (!this.lockedP1 || this.lockedP2)) return;
+        } else {
+          if (!GameState.connected) return;
+          if (GameState.role === 'host' && (playerNum !== 1 || this.lockedP1)) return;
+          if (GameState.role === 'guest' && (playerNum !== 2 || this.lockedP2)) return;
+        }
+        AudioFX.lock();
+        if (GameState.mode === 'offline') {
+          if (playerNum === 1) this.lockedP1 = true;
+          else this.lockedP2 = true;
+          this.updateInputBoxesUI();
+        } else if (GameState.role === 'host') {
+          this.lockedP1 = true;
+          this.updateInputBoxesUI();
+          RoomManager.send({ type: 'ABCD_HOST_LOCKED_NOTICE' });
+        } else {
+          if (!RoomManager.send({ type: 'ABCD_GUEST_NUM', num: this.numP2 })) return;
+          this.lockedP2 = true;
+          this.updateInputBoxesUI();
+        }
+      },
+
+      handleCalculateClick() {
+        if (!(this.lockedP1 && this.lockedP2) || this.calculationShown) return;
+        if (GameState.mode === 'online' && (GameState.role !== 'host' || !GameState.connected)) return;
+        if (!Number.isInteger(this.numP1) || !Number.isInteger(this.numP2) || this.numP1 < 1 || this.numP1 > 20 || this.numP2 < 1 || this.numP2 > 20) return;
+
+        this.calculationShown = true;
+        document.getElementById('btnCalculateABCD').disabled = true;
+        AudioFX.win();
+
+        const total = this.numP1 + this.numP2;
+        const index = ((total - 1) % 26) + 1;
+        const letter = String.fromCharCode(64 + index);
+
+        if (GameState.mode === 'online' && GameState.role === 'host') {
+          RoomManager.send({
+            type: 'ABCD_REVEAL_LETTER',
+            numP1: this.numP1,
+            numP2: this.numP2,
+            total: total,
+            index: index,
+            letter: letter
+          });
+        }
+
+        this.showCalculationResult(this.numP1, this.numP2, total, index, letter);
+      },
+
+      showCalculationResult(n1, n2, total, index, letter) {
+        if (![n1, n2].every((value) => Number.isInteger(value) && value >= 1 && value <= 20)) return;
+        const expectedTotal = n1 + n2;
+        const expectedIndex = ((expectedTotal - 1) % 26) + 1;
+        const expectedLetter = String.fromCharCode(64 + expectedIndex);
+        if (total !== expectedTotal || index !== expectedIndex || letter !== expectedLetter || !this.HINTS[this.currentTheme]) return;
+        this.calculationShown = true;
+        document.getElementById('abcdInputSection').style.display = 'none';
+        document.getElementById('abcdResultSection').style.display = 'block';
+
+        const wrapInfo = total > 26 ? ` (Modulo 26 ➡️ ke-${index})` : ` (Huruf ke-${index})`;
+        document.getElementById('abcdFormulaText').textContent =
+          `${n1} + ${n2} = ${total}${wrapInfo} ➡️ ${letter}`;
+
+        document.getElementById('abcdGiantLetter').textContent = letter;
+        document.getElementById('promptThemeText').textContent = `${this.currentEmoji} ${this.currentTheme}`;
+        document.getElementById('promptLetterText').textContent = letter;
+
+        const themeDict = this.HINTS[this.currentTheme] || {};
+        const sampleWords = themeDict[letter] || `Kata ${this.currentTheme} berawalan ${letter}`;
+        document.getElementById('abcdExampleHint').textContent = `💡 Contoh: ${sampleWords}`;
+
+        AudioFX.speak(`Huruf ${letter}! Sebutkan ${this.currentTheme} berawalan huruf ${letter}!`);
+
+        this.startCountdownTimer();
+      },
+
+      startCountdownTimer() {
+        this.stopTimerInterval();
+        this.timeLeft = 10;
+        this.roundEnded = false;
+
+        document.getElementById('abcdTimerStatusBanner').style.display = 'none';
+        document.getElementById('btnAnsweredABCD').disabled = false;
+        this.renderTimerUI(10);
+
+        if (GameState.mode === 'offline' || GameState.role === 'host') {
+          this.timerInterval = setInterval(() => {
+            if (this.roundEnded) {
+              this.stopTimerInterval();
+              return;
+            }
+            this.timeLeft--;
+            if (GameState.mode === 'online' && GameState.role === 'host') {
+              RoomManager.send({ type: 'ABCD_TIMER_TICK', timeLeft: this.timeLeft });
+            }
+
+            if (this.timeLeft > 0) {
+              this.renderTimerUI(this.timeLeft);
+            } else {
+              this.renderTimerUI(0);
+              this.stopTimerInterval();
+              if (GameState.mode === 'online' && GameState.role === 'host') {
+                RoomManager.send({ type: 'ABCD_TIME_UP' });
+              }
+              this.triggerTimeUpUI();
+            }
+          }, 1000);
+        }
+      },
+
+      renderTimerUI(seconds) {
+        const numEl = document.getElementById('abcdTimerDisplay');
+        const barEl = document.getElementById('abcdTimerBar');
+
+        numEl.textContent = seconds;
+        const pct = Math.max(0, Math.min(100, (seconds / 10) * 100));
+        barEl.style.width = pct + '%';
+
+        if (seconds <= 3 && seconds > 0) {
+          numEl.classList.add('danger');
+          barEl.className = 'timer-bar-fill danger';
+          AudioFX.countdownTick(true);
+        } else if (seconds <= 6 && seconds > 3) {
+          numEl.classList.remove('danger');
+          barEl.className = 'timer-bar-fill warn';
+          AudioFX.countdownTick(false);
+        } else if (seconds > 6) {
+          numEl.classList.remove('danger');
+          barEl.className = 'timer-bar-fill';
+          if (seconds < 10) AudioFX.countdownTick(false);
+        } else {
+          numEl.classList.add('danger');
+          barEl.className = 'timer-bar-fill danger';
+        }
+      },
+
+      triggerTimeUpUI() {
+        if (this.roundEnded) return;
+        this.roundEnded = true;
+        this.stopTimerInterval();
+
+        document.getElementById('btnAnsweredABCD').disabled = true;
+        const banner = document.getElementById('abcdTimerStatusBanner');
+        banner.style.display = 'block';
+        banner.style.background = '#ff7979';
+        banner.style.color = '#fff';
+        banner.textContent = '⏰ Waktu habis!';
+
+        AudioFX.buzzer();
+        AudioFX.speak('Waktu habis!');
+      },
+
+      markAnswered() {
+        if (this.roundEnded || !this.calculationShown) return;
+        const who = GameState.mode === 'online'
+          ? (GameState.role === 'host' ? 'Player 1' : 'Player 2')
+          : '';
+        this.triggerAnsweredCelebration(who, true);
+      },
+
+      triggerAnsweredCelebration(byPlayer = '', broadcast = false) {
+        if (this.roundEnded || !this.calculationShown) return;
+        this.roundEnded = true;
+        this.stopTimerInterval();
+
+        if (broadcast && GameState.mode === 'online') {
+          RoomManager.send({ type: 'ABCD_ANSWERED', byPlayer: byPlayer });
+        }
+
+        document.getElementById('btnAnsweredABCD').disabled = true;
+        document.getElementById('abcdTimerDisplay').classList.remove('danger');
+
+        const banner = document.getElementById('abcdTimerStatusBanner');
+        banner.style.display = 'block';
+        banner.style.background = '#badc58';
+        banner.style.color = 'var(--dark)';
+        banner.textContent = byPlayer
+          ? `🎉 Hebat! ${byPlayer} Sudah Menjawab!`
+          : '🎉 Hebat! Sudah Dijawab!';
+
+        AudioFX.win();
+        AudioFX.speak('Hebat! Sudah dijawab!');
+      },
+
+      stopTimerInterval() {
+        if (this.timerInterval) {
+          clearInterval(this.timerInterval);
+          this.timerInterval = null;
+        }
+      },
+
+      requestNewRound() {
+        AudioFX.click();
+        this.startNewRoundSameTheme(true);
+      },
+
+      requestChangeTheme() {
+        if (GameState.mode === 'online' && GameState.role === 'guest') return;
+        AudioFX.click();
+        this.openThemeSelection(true);
+      }
+    };
+
+    // Inisialisasi saat aplikasi dibuka di Smartphone
+    window.addEventListener('DOMContentLoaded', () => {
+      ABCDGame.buildQuickNumpad();
+
+      // Cek apakah dibuka dari link undangan WhatsApp (?room=XXXX)
+      const params = new URLSearchParams(window.location.search);
+      const invitedRoom = (params.get('room') || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (invitedRoom.length === 4) {
+        AppNav.openOnlineLobby(invitedRoom);
+      }
+    });
+  </script>
+</body>
+</html>
